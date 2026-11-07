@@ -315,7 +315,7 @@ const ProductDetails = () => {
             </div>
 
             <div className="store-quick-details">
-              <p><FiMapPin /> {storeSettings.shopName || 'STEP HOUSE'}: {storeSettings.address}, {storeSettings.city}</p>
+              <p><FiMapPin /> {storeSettings.shopName || 'NEW MB SHOES'}: {storeSettings.address}, {storeSettings.city}</p>
               <p><FiClock /> Open Today: {storeSettings.openingTime} - {storeSettings.closingTime}</p>
               <p><FiPhone /> Call for Hold/Inquiry: <a href={`tel:${storeSettings.contactNumber}`}>{storeSettings.contactNumber}</a></p>
             </div>

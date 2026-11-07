@@ -51,7 +51,7 @@ const AdminLogin = () => {
           <div className="shield-icon-wrap">
             <FiShield size={32} />
           </div>
-          <h2>{storeSettings.shopName || 'STEP HOUSE'} Admin Portal</h2>
+          <h2>{storeSettings.shopName || 'NEW MB SHOES'} Admin Portal</h2>
           <p>Authorized inventory & showroom management access</p>
         </div>
 

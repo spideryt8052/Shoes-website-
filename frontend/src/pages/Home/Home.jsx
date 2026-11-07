@@ -57,7 +57,7 @@ const Home = () => {
             </div>
 
             <h1 className="hero-title">
-              Discover Premium Shoes In Person at {storeSettings.shopName || 'STEP HOUSE'}.
+              Discover Premium Shoes In Person at {storeSettings.shopName || 'NEW MB SHOES'}.
             </h1>
 
             <p className="hero-description">
@@ -236,7 +236,7 @@ const Home = () => {
             <span className="banner-badge">Why Visit Our Store?</span>
             <h2>Never Guess Shoe Sizes Online Again</h2>
             <p>
-              Footwear sizes vary between Nike, Adidas, Puma, and Woodland. When you visit <strong>{storeSettings.shopName || 'STEP HOUSE'}</strong>, our footwear specialists measure your exact foot span and provide multiple size trials on the spot.
+              Footwear sizes vary between Nike, Adidas, Puma, and Woodland. When you visit <strong>{storeSettings.shopName || 'NEW MB SHOES'}</strong>, our footwear specialists measure your exact foot span and provide multiple size trials on the spot.
             </p>
             <div className="banner-perks">
               <div className="perk">✓ Instant comfort comparison</div>
@@ -246,7 +246,7 @@ const Home = () => {
           </div>
           <div className="banner-right">
             <div className="store-callout-card">
-              <h3>{storeSettings.shopName || 'STEP HOUSE'}</h3>
+              <h3>{storeSettings.shopName || 'NEW MB SHOES'}</h3>
               <p className="callout-address">{storeSettings.address}, {storeSettings.city}</p>
               <p className="callout-timings"><strong>Open:</strong> {storeSettings.openingTime} - {storeSettings.closingTime}</p>
               <a

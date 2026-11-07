@@ -12,7 +12,7 @@ const Brands = () => {
       <section className="catalog-header-bar">
         <div className="container">
           <span className="section-tag">Authorized Retail Partnerships</span>
-          <h1 className="catalog-page-title">Footwear Brands at {storeSettings.shopName || 'STEP HOUSE'}</h1>
+          <h1 className="catalog-page-title">Footwear Brands at {storeSettings.shopName || 'NEW MB SHOES'}</h1>
           <p className="catalog-page-desc">
             Explore authentic collections from world-renowned athletic and lifestyle footwear brands. All shoes are 100% genuine with authorized warranty cards.
           </p>
