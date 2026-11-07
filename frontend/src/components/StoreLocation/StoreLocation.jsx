@@ -81,9 +81,9 @@ const StoreLocation = () => {
                   <FiCompass className="detail-icon" />
                 </div>
                 <div>
-                  <h4>Nearby Landmark & Parking</h4>
+                  <h4>Nearby Landmark & Location</h4>
                   <p className="landmark-text">
-                    Valet & Dedicated customer parking available near metro square entrance.
+                    Near Titan World, Shah Market, Khalifabagh Chowk. Convenient customer parking available on D.N. Singh Road.
                   </p>
                 </div>
               </div>
