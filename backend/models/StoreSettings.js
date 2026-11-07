@@ -107,6 +107,22 @@ const storeSettingsSchema = new mongoose.Schema(
       enabled: { type: Boolean, default: true },
       text: { type: String, default: '👟 Visit our physical showroom today to experience authentic comfort fit and seasonal discounts!' },
     },
+    branches: [
+      {
+        name: { type: String, required: true },
+        tag: { type: String, default: 'Branch' },
+        address: { type: String, required: true },
+        landmark: { type: String, default: '' },
+        city: { type: String, default: 'Bhagalpur' },
+        state: { type: String, default: 'Bihar' },
+        pincode: { type: String, default: '812001' },
+        contactNumber: { type: String, default: '+91 94312 14500' },
+        googleMapsLocationUrl: { type: String, required: true },
+        googleMapsEmbedUrl: { type: String, default: '' },
+        openingHours: { type: String, default: '10:00 AM - 09:30 PM (All 7 Days)' },
+        isPrimary: { type: Boolean, default: false },
+      },
+    ],
   },
   {
     timestamps: true,

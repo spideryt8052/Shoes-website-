@@ -50,7 +50,7 @@ const Footer = () => {
         <div className="footer-col brand-col">
           <div className="footer-logo">
             <span className="logo-emoji">👟</span>
-            <span className="logo-text">{storeSettings.shopName || 'STEP HOUSE'}</span>
+            <span className="logo-text">{storeSettings.shopName || 'NEW MB SHOES'}</span>
           </div>
           <p className="footer-desc">
             {storeSettings.shopDescription ||
@@ -158,7 +158,7 @@ const Footer = () => {
 
       <div className="footer-bottom">
         <div className="container bottom-content">
-          <p>© {new Date().getFullYear()} {storeSettings.shopName || 'STEP HOUSE'}. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} {storeSettings.shopName || 'NEW MB SHOES'}. All rights reserved.</p>
           <div className="bottom-links">
             <Link to="/contact">Store Location</Link>
             <span className="dot">•</span>
