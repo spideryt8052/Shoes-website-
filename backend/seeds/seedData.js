@@ -1,6 +1,12 @@
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const path = require('path');
+const dns = require('dns');
+
+// Use reliable public DNS resolvers to prevent SRV lookup failures on local ISPs
+try {
+  dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1']);
+} catch (e) {}
 
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
