@@ -1,7 +1,11 @@
 import axios from 'axios';
 
+// Format base URL robustly to prevent double /api or trailing slash issues
+const rawUrl = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.trim().replace(/\/+$/, '') : '';
+const baseURL = rawUrl ? (rawUrl.endsWith('/api') ? rawUrl : `${rawUrl}/api`) : '/api';
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : '/api',
+  baseURL,
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
