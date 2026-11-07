@@ -1,0 +1,235 @@
+.store-location-section {
+  padding: 5rem 0;
+  background-color: #ffffff;
+  border-top: 1px solid var(--border-light);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-center .section-subtitle {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.location-grid {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 2.5rem;
+  align-items: stretch;
+  margin-top: 2rem;
+}
+
+/* Store Info Card */
+.store-info-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-lg);
+  padding: 2.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 0.3rem 0.7rem;
+  border-radius: 20px;
+  width: fit-content;
+  margin-bottom: 1rem;
+}
+
+.live-dot {
+  width: 7px;
+  height: 7px;
+  background-color: #10b981;
+  border-radius: 50%;
+  animation: pulse-dot 1.8s infinite;
+}
+
+@keyframes pulse-dot {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(1.3); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.store-title {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--text-main);
+  letter-spacing: -0.02em;
+}
+
+.store-subtitle {
+  font-size: 0.92rem;
+  color: var(--text-secondary);
+  margin-bottom: 2rem;
+}
+
+.details-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.4rem;
+  margin-bottom: 2rem;
+}
+
+.detail-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.detail-icon-wrap {
+  width: 40px;
+  height: 40px;
+  background-color: #ffffff;
+  border: 1px solid var(--border-medium);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.detail-icon {
+  font-size: 1.2rem;
+  color: var(--brand-accent);
+}
+
+.detail-item h4 {
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin-bottom: 0.2rem;
+}
+
+.address-text {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-main);
+  line-height: 1.4;
+}
+
+.hours-text {
+  font-size: 1.05rem;
+  color: var(--text-main);
+}
+
+.days-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  display: block;
+}
+
+.phone-big-link {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-main);
+  font-family: var(--font-heading);
+}
+
+.phone-big-link:hover {
+  text-decoration: underline;
+  color: #2563eb;
+}
+
+.alt-phone {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+}
+
+.landmark-text {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+}
+
+.location-cta-group {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.8rem;
+}
+
+.in-store-guarantees {
+  margin-top: auto;
+  padding-top: 1.5rem;
+  border-top: 1px dashed var(--border-medium);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.2rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.in-store-guarantees span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.check-icon {
+  color: #059669;
+}
+
+/* Map Wrapper */
+.store-map-wrapper {
+  background-color: var(--bg-subtle);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  min-height: 480px;
+  position: relative;
+}
+
+.map-placeholder {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  text-align: center;
+  gap: 1rem;
+}
+
+.map-pin-placeholder {
+  color: #dc2626;
+}
+
+/* Responsiveness */
+@media (max-width: 992px) {
+  .location-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .store-map-wrapper {
+    min-height: 360px;
+  }
+}
+
+@media (max-width: 600px) {
+  .store-info-card {
+    padding: 1.5rem;
+  }
+
+  .location-cta-group {
+    flex-direction: column;
+  }
+
+  .in-store-guarantees {
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+}
+

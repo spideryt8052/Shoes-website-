@@ -1,0 +1,70 @@
+.stock-history-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.date-time-cell {
+  display: flex;
+  flex-direction: column;
+}
+
+.date-time-cell span {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.movement-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  border-radius: 4px;
+}
+
+.movement-badge.in {
+  background-color: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.movement-badge.out {
+  background-color: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.movement-badge.adjust {
+  background-color: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+.diff-num {
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.diff-num.plus { color: #059669; }
+.diff-num.minus { color: #dc2626; }
+.diff-num.zero { color: #71717a; }
+
+.balance-text {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.admin-user-cell {
+  font-weight: 600;
+  color: var(--text-main);
+  font-size: 0.85rem;
+}
+
+.remarks-text {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  font-style: italic;
+  max-width: 250px;
+  display: inline-block;
+}
+

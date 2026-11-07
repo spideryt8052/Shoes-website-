@@ -1,0 +1,330 @@
+/* Mobile Filter Bar */
+.mobile-filter-bar {
+  display: none;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding: 0.8rem 1rem;
+  background-color: #ffffff;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+}
+
+.mobile-filter-btn {
+  padding: 0.5rem 1rem;
+  font-size: 0.88rem;
+}
+
+.results-counter {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* Sidebar */
+.filters-sidebar {
+  background-color: #ffffff;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  width: 100%;
+}
+
+.filters-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-light);
+  margin-bottom: 1.5rem;
+}
+
+.filters-header-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.filters-header-title h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.filter-icon {
+  font-size: 1.1rem;
+  color: var(--text-main);
+}
+
+.active-count-badge {
+  background-color: var(--brand-accent);
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.15rem 0.45rem;
+  border-radius: 10px;
+}
+
+.filters-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.reset-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #dc2626;
+  padding: 0.3rem 0.5rem;
+  border-radius: 4px;
+}
+
+.reset-btn:hover {
+  background-color: #fef2f2;
+}
+
+.close-mobile-btn {
+  display: none;
+  padding: 0.3rem;
+  color: var(--text-main);
+}
+
+/* Filter Groups */
+.filter-group {
+  margin-bottom: 1.8rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.filter-group:last-of-type {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.filter-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 0.9rem;
+  letter-spacing: -0.01em;
+}
+
+/* Radio & Checkbox */
+.availability-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.radio-label {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.88rem;
+  cursor: pointer;
+  color: var(--text-secondary);
+}
+
+.radio-label input {
+  accent-color: var(--brand-accent);
+  cursor: pointer;
+}
+
+.stock-highlight {
+  font-weight: 600;
+}
+
+.in-stock-text {
+  color: #059669;
+}
+
+.out-of-stock-text {
+  color: #dc2626;
+}
+
+/* Pill Group */
+.pill-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.filter-pill {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+}
+
+.filter-pill:hover {
+  border-color: var(--text-main);
+  color: var(--text-main);
+}
+
+.filter-pill.active {
+  background-color: var(--brand-accent);
+  color: #ffffff;
+  border-color: var(--brand-accent);
+}
+
+/* Sizes Grid */
+.sizes-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.4rem;
+}
+
+.size-filter-pill {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  padding: 0.45rem 0.2rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-main);
+  text-align: center;
+  transition: all var(--transition-fast);
+}
+
+.size-filter-pill:hover {
+  border-color: var(--text-main);
+}
+
+.size-filter-pill.active {
+  background-color: var(--brand-accent);
+  color: #ffffff;
+  border-color: var(--brand-accent);
+}
+
+/* Scrollable Checkbox List */
+.checkbox-scroll-list {
+  max-height: 190px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding-right: 0.4rem;
+}
+
+.checkbox-scroll-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.checkbox-scroll-list::-webkit-scrollbar-thumb {
+  background-color: var(--border-medium);
+  border-radius: 4px;
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.checkbox-item input {
+  accent-color: var(--brand-accent);
+  cursor: pointer;
+}
+
+.checkbox-item:hover .checkbox-name {
+  color: var(--text-main);
+}
+
+.checkbox-name {
+  flex: 1;
+}
+
+.item-count {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* Price Range */
+.price-inputs {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.price-field {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  padding: 0.35rem 0.6rem;
+  background-color: var(--bg-surface);
+  flex: 1;
+}
+
+.price-field span {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-right: 0.3rem;
+}
+
+.price-field input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 0.85rem;
+  color: var(--text-main);
+}
+
+.price-sep {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.mobile-drawer-footer {
+  display: none;
+  margin-top: 1.5rem;
+}
+
+.btn-block {
+  width: 100%;
+}
+
+/* Mobile Drawer */
+@media (max-width: 992px) {
+  .mobile-filter-bar {
+    display: flex;
+  }
+
+  .filters-sidebar {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 85%;
+    max-width: 380px;
+    height: 100vh;
+    z-index: 2000;
+    overflow-y: auto;
+    border-radius: 0;
+    box-shadow: 10px 0 25px rgba(0, 0, 0, 0.2);
+  }
+
+  .filters-sidebar.mobile-drawer-open {
+    display: block;
+  }
+
+  .close-mobile-btn {
+    display: block;
+  }
+
+  .mobile-drawer-footer {
+    display: block;
+  }
+}
+

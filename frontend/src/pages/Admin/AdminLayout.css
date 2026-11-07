@@ -1,0 +1,246 @@
+.admin-container {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+  background-color: #f8fafc;
+}
+
+/* Sidebar */
+.admin-sidebar {
+  width: 270px;
+  background-color: #0f172a;
+  color: #94a3b8;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  z-index: 100;
+  border-right: 1px solid #1e293b;
+}
+
+.admin-sidebar-header {
+  padding: 1.5rem 1.4rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #1e293b;
+}
+
+.admin-store-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.admin-brand-icon {
+  font-size: 1.8rem;
+}
+
+.admin-store-brand h3 {
+  color: #ffffff;
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+
+.admin-subtext {
+  font-size: 0.7rem;
+  color: #38bdf8;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+}
+
+.sidebar-close-btn {
+  display: none;
+  color: #94a3b8;
+  padding: 0.3rem;
+}
+
+/* Profile Strip */
+.admin-profile-strip {
+  padding: 1rem 1.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background-color: #1e293b;
+  border-bottom: 1px solid #334155;
+}
+
+.profile-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: #0284c7;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.profile-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-user-name {
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.admin-user-role {
+  color: #94a3b8;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+/* Nav Menu */
+.admin-nav-menu {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem 0;
+}
+
+.admin-nav-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0 0.8rem;
+}
+
+.admin-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.65rem 0.9rem;
+  border-radius: var(--radius-sm);
+  color: #94a3b8;
+  font-size: 0.88rem;
+  font-weight: 600;
+  transition: all var(--transition-fast);
+}
+
+.admin-nav-link:hover {
+  background-color: #1e293b;
+  color: #ffffff;
+}
+
+.admin-nav-link.active {
+  background-color: #0284c7;
+  color: #ffffff;
+}
+
+.nav-icon {
+  font-size: 1.15rem;
+  display: flex;
+  align-items: center;
+}
+
+/* Sidebar Footer */
+.admin-sidebar-footer {
+  padding: 1rem 0.8rem;
+  border-top: 1px solid #1e293b;
+}
+
+.logout-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.65rem 0.9rem;
+  border-radius: var(--radius-sm);
+  color: #f87171;
+  font-size: 0.88rem;
+  font-weight: 600;
+  transition: all var(--transition-fast);
+}
+
+.logout-btn:hover {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+/* Main Viewport */
+.admin-main-viewport {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.admin-topbar {
+  background-color: #ffffff;
+  border-bottom: 1px solid var(--border-medium);
+  padding: 0.9rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 90;
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.sidebar-toggle-btn {
+  display: none;
+  color: var(--text-main);
+  padding: 0.3rem;
+}
+
+.portal-breadcrumb {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.live-store-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+}
+
+.admin-page-content {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+/* Responsiveness */
+@media (max-width: 992px) {
+  .admin-sidebar {
+    position: fixed;
+    top: 0;
+    left: -270px;
+    transition: left 0.3s ease;
+  }
+
+  .admin-sidebar.sidebar-open {
+    left: 0;
+  }
+
+  .sidebar-close-btn {
+    display: block;
+  }
+
+  .sidebar-toggle-btn {
+    display: block;
+  }
+
+  .admin-page-content {
+    padding: 1.5rem 1rem;
+  }
+}
+

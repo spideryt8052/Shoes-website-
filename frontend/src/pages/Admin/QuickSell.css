@@ -1,0 +1,453 @@
+.quick-sell-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.pos-grid-layout {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .pos-grid-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pos-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+}
+
+.pos-section-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Product Search & Dropdown */
+.shoe-search-wrapper {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.shoe-search-input {
+  width: 100%;
+  padding: 12px 16px 12px 42px;
+  font-size: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  transition: var(--transition-fast);
+}
+
+.shoe-search-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.1);
+}
+
+.search-icon-pos {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.shoe-dropdown-results {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
+  max-height: 280px;
+  overflow-y: auto;
+  z-index: 50;
+}
+
+.shoe-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background 0.15s ease;
+}
+
+.shoe-dropdown-item:hover,
+.shoe-dropdown-item.active {
+  background: var(--bg-neutral);
+}
+
+.dropdown-shoe-thumb {
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: #f1f3f5;
+  border: 1px solid var(--border-subtle);
+}
+
+.dropdown-shoe-info {
+  flex: 1;
+}
+
+.dropdown-shoe-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.dropdown-shoe-meta {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  display: flex;
+  gap: 10px;
+}
+
+/* Selected Shoe Banner */
+.selected-shoe-banner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--bg-neutral);
+  padding: 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  margin-bottom: 24px;
+}
+
+.selected-shoe-img {
+  width: 70px;
+  height: 70px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: #fff;
+  border: 1px solid var(--border-color);
+}
+
+.selected-shoe-details {
+  flex: 1;
+}
+
+.selected-shoe-brand {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.selected-shoe-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 2px 0 4px;
+}
+
+.selected-shoe-stock-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  background: #e6f4ea;
+  color: #137333;
+}
+
+.selected-shoe-stock-pill.low {
+  background: #fef7e0;
+  color: #b06000;
+}
+
+.selected-shoe-stock-pill.out {
+  background: #fce8e6;
+  color: #c5221f;
+}
+
+/* Variant Matrix Selection */
+.variant-selector-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.variant-pos-btn {
+  padding: 12px 10px;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.variant-pos-btn:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  background: var(--bg-neutral);
+}
+
+.variant-pos-btn.selected {
+  border-color: var(--color-primary);
+  background: #111827;
+  color: #ffffff;
+}
+
+.variant-pos-btn.selected .variant-pos-stock {
+  color: #93c5fd;
+}
+
+.variant-pos-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background: #f8f9fa;
+  border-color: #e9ecef;
+  text-decoration: line-through;
+}
+
+.variant-pos-size {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.variant-pos-color {
+  font-size: 0.75rem;
+  color: inherit;
+  opacity: 0.85;
+}
+
+.variant-pos-stock {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #16a34a;
+}
+
+.variant-pos-stock.out {
+  color: #dc2626;
+}
+
+/* Payment Mode Grid */
+.payment-mode-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 600px) {
+  .payment-mode-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.payment-mode-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 8px;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.payment-mode-btn:hover {
+  border-color: var(--text-primary);
+}
+
+.payment-mode-btn.active {
+  border-color: var(--color-primary);
+  background: #111827;
+  color: #ffffff;
+}
+
+/* Total Summary Box */
+.pos-total-box {
+  background: var(--bg-neutral);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.pos-total-label {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.pos-total-amount {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+/* Recent sales sidebar feed */
+.recent-sales-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 480px;
+  overflow-y: auto;
+}
+
+.recent-sale-item {
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.recent-sale-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.recent-sale-shoe {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.recent-sale-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.recent-sale-amount {
+  font-weight: 700;
+  color: #16a34a;
+}
+
+/* Modal Backdrop & Receipt Slip */
+.receipt-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 16px;
+}
+
+.receipt-modal-card {
+  background: #ffffff;
+  color: #111827;
+  border-radius: var(--radius-md);
+  padding: 24px;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: var(--shadow-xl);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.receipt-slip-printable {
+  border: 1px dashed #cccccc;
+  border-radius: 4px;
+  padding: 20px;
+  font-family: 'Courier New', Courier, monospace;
+  background: #fafafa;
+  color: #111827;
+}
+
+.receipt-store-title {
+  text-align: center;
+  font-size: 1.25rem;
+  font-weight: 800;
+  margin-bottom: 2px;
+}
+
+.receipt-store-sub {
+  text-align: center;
+  font-size: 0.75rem;
+  color: #666666;
+  margin-bottom: 12px;
+}
+
+.receipt-divider {
+  border-top: 1px dashed #bbbbbb;
+  margin: 10px 0;
+}
+
+.receipt-meta-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  margin-bottom: 4px;
+}
+
+.receipt-total-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 1.05rem;
+  font-weight: 800;
+  padding-top: 6px;
+}
+
+.receipt-footer-msg {
+  text-align: center;
+  font-size: 0.75rem;
+  color: #666666;
+  margin-top: 14px;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .receipt-slip-printable, .receipt-slip-printable * {
+    visibility: visible;
+  }
+  .receipt-slip-printable {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 320px;
+    border: none;
+    padding: 0;
+    margin: 0;
+  }
+}
+
+

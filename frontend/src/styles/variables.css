@@ -1,0 +1,56 @@
+:root {
+  /* Color Palette - Premium Human Retail Look */
+  --bg-primary: #ffffff;
+  --bg-surface: #f8fafc;
+  --bg-subtle: #f1f5f9;
+  --bg-dark: #090d16;
+  --bg-dark-surface: #111827;
+
+  /* Typography Colors */
+  --text-main: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --text-inverse: #ffffff;
+
+  /* Accent & Status Colors */
+  --brand-accent: #0f172a;
+  --brand-accent-hover: #1e293b;
+  --brand-primary-blue: #2563eb;
+  --brand-gold: #f59e0b;
+
+  --stock-in-bg: #ecfdf5;
+  --stock-in-text: #065f46;
+  --stock-in-border: #a7f3d0;
+  --stock-low-bg: #fffbeb;
+  --stock-low-text: #92400e;
+  --stock-low-border: #fde68a;
+  --stock-out-bg: #fef2f2;
+  --stock-out-text: #991b1b;
+  --stock-out-border: #fecaca;
+
+  /* Borders & Dividers */
+  --border-light: #f1f5f9;
+  --border-medium: #e2e8f0;
+  --border-dark: #334155;
+
+  /* Fonts */
+  --font-heading: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* Layout */
+  --container-max-width: 1400px;
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+
+  /* Shadows */
+  --shadow-subtle: 0 1px 3px rgba(15, 23, 42, 0.05);
+  --shadow-card: 0 4px 16px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.02);
+  --shadow-hover: 0 12px 30px -4px rgba(15, 23, 42, 0.1), 0 4px 6px -2px rgba(15, 23, 42, 0.05);
+  --shadow-dropdown: 0 20px 25px -5px rgba(15, 23, 42, 0.1), 0 8px 10px -6px rgba(15, 23, 42, 0.05);
+
+  /* Transitions */
+  --transition-fast: 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-normal: 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}

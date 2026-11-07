@@ -1,0 +1,377 @@
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background-color: #ffffff;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
+  width: 100%;
+}
+
+/* Top Announcement Bar */
+.top-bar {
+  background-color: #090d16;
+  color: #94a3b8;
+  font-size: 0.8rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #1e293b;
+  width: 100%;
+}
+
+.top-bar-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.top-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.info-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.info-item .icon {
+  color: #e2e8f0;
+}
+
+.phone-link:hover {
+  color: #ffffff;
+  text-decoration: underline;
+}
+
+.info-divider {
+  color: #334155;
+}
+
+.top-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 1.4rem;
+}
+
+.store-badge {
+  background-color: #1e293b;
+  color: #f8fafc;
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+}
+
+.admin-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #cbd5e1;
+  font-weight: 600;
+  font-size: 0.8rem;
+  transition: color var(--transition-fast);
+}
+
+.admin-link:hover {
+  color: #ffffff;
+}
+
+.admin-link.active-session {
+  color: #34d399;
+}
+
+/* Main Header */
+.main-header {
+  padding: 1.1rem 0;
+  border-bottom: 1px solid var(--border-medium);
+  background-color: #ffffff;
+  width: 100%;
+}
+
+.main-header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+}
+
+/* Brand Identity */
+.brand-identity {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.brand-logo-icon {
+  font-size: 2.4rem;
+  line-height: 1;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.brand-name {
+  font-size: 1.7rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--text-main);
+  text-transform: uppercase;
+  line-height: 1.1;
+}
+
+.brand-tagline {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64748b;
+  margin-top: 0.15rem;
+}
+
+/* Desktop Search */
+.desktop-search-form {
+  flex: 1;
+  max-width: 520px;
+}
+
+.search-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background-color: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-sm);
+  padding: 0.25rem 0.25rem 0.25rem 0.9rem;
+  transition: all var(--transition-fast);
+}
+
+.search-input-wrap:focus-within {
+  border-color: #0f172a;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08);
+}
+
+.search-input-wrap .search-icon {
+  color: #64748b;
+  font-size: 1.15rem;
+  margin-right: 0.6rem;
+  flex-shrink: 0;
+}
+
+.search-input-wrap input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 0.92rem;
+  color: var(--text-main);
+}
+
+.search-submit-btn {
+  background-color: #0f172a;
+  color: #ffffff;
+  padding: 0.55rem 1.2rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border-radius: var(--radius-sm);
+  transition: background-color var(--transition-fast);
+}
+
+.search-submit-btn:hover {
+  background-color: #1e293b;
+}
+
+/* Header Actions */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.mobile-search-toggle {
+  display: none;
+  padding: 0.5rem;
+  color: var(--text-main);
+}
+
+.visit-store-btn {
+  padding: 0.75rem 1.4rem;
+  font-size: 0.92rem;
+  border-radius: var(--radius-sm);
+  background: #0f172a;
+  color: #ffffff;
+}
+
+.nav-arrow-icon {
+  font-size: 1.05rem;
+}
+
+/* Mobile Toggle */
+.mobile-toggle-btn {
+  display: none;
+  color: var(--text-main);
+  padding: 0.4rem;
+}
+
+/* Mobile Search Overlay */
+.mobile-search-bar {
+  padding: 0.9rem 1rem;
+  background-color: #f1f5f9;
+  border-top: 1px solid var(--border-medium);
+}
+
+.mobile-search-bar form {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.mobile-search-bar input {
+  flex: 1;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-sm);
+  outline: none;
+  background-color: #ffffff;
+}
+
+/* Navigation Bar */
+.nav-bar {
+  background-color: #ffffff;
+  border-bottom: 1px solid var(--border-medium);
+  width: 100%;
+}
+
+.nav-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nav-links {
+  display: flex;
+  list-style: none;
+  gap: 2rem;
+}
+
+.nav-link {
+  display: inline-block;
+  padding: 0.9rem 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #475569;
+  border-bottom: 2px solid transparent;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.nav-link:hover {
+  color: #0f172a;
+}
+
+.nav-link.active {
+  color: #0f172a;
+  border-bottom-color: #0f172a;
+}
+
+.nav-extra-info {
+  display: flex;
+  align-items: center;
+}
+
+.store-address-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.store-address-hint:hover {
+  color: #0f172a;
+}
+
+.pin-icon {
+  color: #dc2626;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 992px) {
+  .desktop-search-form {
+    display: none;
+  }
+
+  .mobile-search-toggle {
+    display: block;
+  }
+
+  .mobile-toggle-btn {
+    display: block;
+  }
+
+  .nav-bar {
+    display: none;
+  }
+
+  .nav-bar.mobile-open {
+    display: block;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: #ffffff;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+    border-bottom: 1px solid #cbd5e1;
+  }
+
+  .nav-bar.mobile-open .nav-content {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 1.2rem 1.5rem;
+  }
+
+  .nav-bar.mobile-open .nav-links {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .nav-bar.mobile-open .nav-link {
+    padding: 0.8rem 0;
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  .nav-bar.mobile-open .nav-extra-info {
+    margin-top: 1rem;
+    padding-top: 0.9rem;
+    border-top: 1px solid var(--border-light);
+  }
+}
+
+@media (max-width: 600px) {
+  .top-bar-left .info-divider,
+  .top-bar-left .phone-link {
+    display: none;
+  }
+
+  .brand-name {
+    font-size: 1.35rem;
+  }
+
+  .brand-tagline {
+    display: none;
+  }
+
+  .visit-store-btn span {
+    display: none;
+  }
+
+  .visit-store-btn {
+    padding: 0.65rem 0.9rem;
+  }
+}
