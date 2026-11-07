@@ -9,6 +9,9 @@ import {
   FiAlertTriangle,
   FiCheckCircle,
   FiShare2,
+  FiPlus,
+  FiTrash2,
+  FiNavigation,
 } from 'react-icons/fi';
 import api from '../../services/api';
 import { useStore } from '../../context/StoreContext';
@@ -35,10 +38,11 @@ const StoreSettingsView = () => {
     googleReviewUrl: '',
     shopDescription: '',
     lowStockThreshold: 2,
-    googleRating: 4.8,
-    totalGoogleReviews: 312,
+    googleRating: 4.3,
+    totalGoogleReviews: 128,
     googleSheetWebhookUrl: '',
     autoSyncGoogleSheet: false,
+    branches: [],
   });
 
   const [loading, setLoading] = useState(false);
@@ -47,7 +51,7 @@ const StoreSettingsView = () => {
   useEffect(() => {
     if (storeSettings) {
       setFormData({
-        shopName: storeSettings.shopName || 'STEP HOUSE',
+        shopName: storeSettings.shopName || 'NEW MB SHOES',
         tagline: storeSettings.tagline || '',
         address: storeSettings.address || '',
         city: storeSettings.city || '',
@@ -65,10 +69,11 @@ const StoreSettingsView = () => {
         googleReviewUrl: storeSettings.googleReviewUrl || '',
         shopDescription: storeSettings.shopDescription || '',
         lowStockThreshold: storeSettings.lowStockThreshold || 2,
-        googleRating: storeSettings.googleRating || 4.8,
-        totalGoogleReviews: storeSettings.totalGoogleReviews || 312,
+        googleRating: storeSettings.googleRating || 4.3,
+        totalGoogleReviews: storeSettings.totalGoogleReviews || 128,
         googleSheetWebhookUrl: storeSettings.googleSheetWebhookUrl || '',
         autoSyncGoogleSheet: Boolean(storeSettings.autoSyncGoogleSheet),
+        branches: storeSettings.branches && storeSettings.branches.length > 0 ? storeSettings.branches : [],
       });
     }
   }, [storeSettings]);
@@ -79,6 +84,46 @@ const StoreSettingsView = () => {
       ...prev,
       [name]: type === 'number' ? Number(value) : type === 'checkbox' ? checked : value,
     }));
+  };
+
+  const handleBranchChange = (index, field, value) => {
+    setFormData((prev) => {
+      const updated = [...(prev.branches || [])];
+      updated[index] = { ...updated[index], [field]: value };
+      return { ...prev, branches: updated };
+    });
+  };
+
+  const handleAddBranch = () => {
+    setFormData((prev) => ({
+      ...prev,
+      branches: [
+        ...(prev.branches || []),
+        {
+          name: `Branch ${(prev.branches?.length || 0) + 1}`,
+          tag: 'Showroom Branch',
+          address: '',
+          landmark: '',
+          city: 'Bhagalpur',
+          state: 'Bihar',
+          pincode: '812001',
+          contactNumber: prev.contactNumber || '+91 94312 14500',
+          googleMapsLocationUrl: '',
+          googleMapsEmbedUrl: '',
+          openingHours: '10:00 AM - 09:30 PM (All 7 Days)',
+          isPrimary: false,
+        },
+      ],
+    }));
+  };
+
+  const handleRemoveBranch = (index) => {
+    if (window.confirm('Are you sure you want to remove this branch location?')) {
+      setFormData((prev) => ({
+        ...prev,
+        branches: prev.branches.filter((_, i) => i !== index),
+      }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -430,6 +475,138 @@ const StoreSettingsView = () => {
             <span className="field-hint" style={{ marginLeft: '28px' }}>
               When checked, every sale recorded via Quick Sell (POS) or End-of-Day batch entry pushes to your Google Sheet immediately in the background.
             </span>
+          </div>
+        </div>
+
+        {/* Card 6: Showroom Branches Network */}
+        <div className="form-card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <div>
+              <h3 className="card-section-title" style={{ margin: 0 }}>
+                <FiMapPin /> Showroom Branches & Stores Network
+              </h3>
+              <p className="card-subtitle" style={{ margin: '4px 0 0' }}>
+                Manage all your physical store locations in Bhagalpur (Shah Market, Tatarpur, Tilkamanjhi, etc.)
+              </p>
+            </div>
+            <button
+              type="button"
+              className="btn btn-sm btn-outline"
+              onClick={handleAddBranch}
+            >
+              <FiPlus /> Add Another Branch
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginTop: '16px' }}>
+            {formData.branches && formData.branches.length > 0 ? (
+              formData.branches.map((b, idx) => (
+                <div
+                  key={b._id || idx}
+                  style={{
+                    background: 'var(--bg-neutral)',
+                    padding: '18px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1px solid var(--border-color)',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                    <span style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text-primary)' }}>
+                      🏪 Branch #{idx + 1}: {b.name || 'Untitled Store'}
+                    </span>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline"
+                      style={{ color: '#dc2626', borderColor: '#fca5a5' }}
+                      onClick={() => handleRemoveBranch(idx)}
+                      disabled={formData.branches.length <= 1}
+                      title="Remove this branch"
+                    >
+                      <FiTrash2 /> Remove
+                    </button>
+                  </div>
+
+                  <div className="form-grid-2">
+                    <div className="form-group">
+                      <label>Branch Name *</label>
+                      <input
+                        type="text"
+                        value={b.name || ''}
+                        onChange={(e) => handleBranchChange(idx, 'name', e.target.value)}
+                        placeholder="e.g. MB SHOES (Tilkamanjhi Branch)"
+                        required
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Branch Tag / Label</label>
+                      <input
+                        type="text"
+                        value={b.tag || ''}
+                        onChange={(e) => handleBranchChange(idx, 'tag', e.target.value)}
+                        placeholder="e.g. 3rd Dukan - Tilkamanjhi"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-group" style={{ marginTop: '10px' }}>
+                    <label>Full Store Address *</label>
+                    <input
+                      type="text"
+                      value={b.address || ''}
+                      onChange={(e) => handleBranchChange(idx, 'address', e.target.value)}
+                      placeholder="e.g. Tilkamanjhi Main Road / Chowk, Bhagalpur - 812001"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-grid-2" style={{ marginTop: '10px' }}>
+                    <div className="form-group">
+                      <label>Nearby Landmark</label>
+                      <input
+                        type="text"
+                        value={b.landmark || ''}
+                        onChange={(e) => handleBranchChange(idx, 'landmark', e.target.value)}
+                        placeholder="e.g. Near Tilkamanjhi Chowk"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Store Contact Number</label>
+                      <input
+                        type="text"
+                        value={b.contactNumber || ''}
+                        onChange={(e) => handleBranchChange(idx, 'contactNumber', e.target.value)}
+                        placeholder="+91 94312 14500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-group" style={{ marginTop: '10px' }}>
+                    <label>Google Maps Location URL (Directions Link) *</label>
+                    <input
+                      type="url"
+                      value={b.googleMapsLocationUrl || ''}
+                      onChange={(e) => handleBranchChange(idx, 'googleMapsLocationUrl', e.target.value)}
+                      placeholder="https://maps.app.goo.gl/38363DB6kC7D1Qiv5"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group" style={{ marginTop: '10px' }}>
+                    <label>Google Maps Embed iframe URL (Optional for embedded map view)</label>
+                    <input
+                      type="text"
+                      value={b.googleMapsEmbedUrl || ''}
+                      onChange={(e) => handleBranchChange(idx, 'googleMapsEmbedUrl', e.target.value)}
+                      placeholder="https://www.google.com/maps/embed?pb=..."
+                    />
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p style={{ color: 'var(--text-muted)' }}>No branches configured.</p>
+            )}
           </div>
         </div>
       </form>
