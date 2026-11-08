@@ -52,6 +52,11 @@ const AdminLogin = () => {
   const [copiedKey, setCopiedKey] = useState(false);
   const [showQrToggle, setShowQrToggle] = useState(false);
 
+  // Emergency 2FA Reset State (Lost phone / deleted authenticator)
+  const [showResetBox, setShowResetBox] = useState(false);
+  const [resetOtp, setResetOtp] = useState('');
+  const [resetOtpSent, setResetOtpSent] = useState(false);
+
   // If already authenticated, redirect to dashboard
   useEffect(() => {
     if (isAuthenticated) {
@@ -214,6 +219,69 @@ const AdminLogin = () => {
       navigator.clipboard.writeText(twoFactorConfig.secret);
       setCopiedKey(true);
       setTimeout(() => setCopiedKey(false), 2000);
+    }
+  };
+
+  // Handle Emergency 2FA Reset: Request OTP via email
+  const handleRequestReset = async () => {
+    setError('');
+    setSuccessMsg('');
+    const targetEmail = twoFactorConfig.adminEmail || email;
+
+    try {
+      setLoading(true);
+      const res = await api.post('/auth/reset-2fa-request', {
+        email: targetEmail,
+        tempToken,
+      });
+
+      if (res.data.success) {
+        setResetOtpSent(true);
+        setSuccessMsg(res.data.message || `Recovery code sent to ${targetEmail}`);
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to send recovery OTP.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle Emergency 2FA Reset: Verify OTP and get brand new QR Code & Secret
+  const handleVerifyReset = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccessMsg('');
+    const targetEmail = twoFactorConfig.adminEmail || email;
+
+    if (!resetOtp || resetOtp.trim().length < 4) {
+      setError('Please enter the 6-digit recovery OTP.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const res = await api.post('/auth/reset-2fa-verify', {
+        email: targetEmail,
+        otp: resetOtp.trim(),
+      });
+
+      if (res.data.success) {
+        setTempToken(res.data.tempToken);
+        setTwoFactorConfig({
+          isConfigured: false,
+          secret: res.data.secret,
+          qrCodeUrl: res.data.qrCodeUrl,
+          adminEmail: res.data.adminEmail || targetEmail,
+        });
+        setShowResetBox(false);
+        setShowQrToggle(true);
+        setResetOtp('');
+        setSuccessMsg('2FA Reset Successful! Please scan your new QR code into Google Authenticator.');
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Invalid or expired recovery code.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -574,6 +642,87 @@ const AdminLogin = () => {
                 ← Back to Login Options
               </button>
             </form>
+
+            {/* Emergency Recovery / Reset 2FA */}
+            <div style={{ marginTop: '1rem', borderTop: '1px dashed #cbd5e1', paddingTop: '0.8rem', textAlign: 'center' }}>
+              {!showResetBox ? (
+                <button
+                  type="button"
+                  onClick={() => setShowResetBox(true)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#dc2626',
+                    fontSize: '0.82rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                  }}
+                >
+                  🚨 Phone kho gaya ya Authenticator code delete ho gaya? Reset 2FA with Email OTP
+                </button>
+              ) : (
+                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '0.9rem', textAlign: 'left' }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#991b1b', marginBottom: '0.3rem' }}>
+                    🚨 Emergency 2FA Account Recovery
+                  </div>
+                  <p style={{ fontSize: '0.78rem', color: '#475569', margin: '0 0 0.6rem 0' }}>
+                    Aapke verified admin email (<strong>{twoFactorConfig.adminEmail || email}</strong>) par 6-digit recovery OTP bheja jayega. Isse purana Google Authenticator delete hokar naya QR Code generate ho jayega.
+                  </p>
+
+                  {!resetOtpSent ? (
+                    <button
+                      type="button"
+                      onClick={handleRequestReset}
+                      disabled={loading}
+                      className="btn btn-outline"
+                      style={{ fontSize: '0.82rem', padding: '0.4rem 0.8rem', width: '100%', borderColor: '#dc2626', color: '#dc2626' }}
+                    >
+                      {loading ? 'Sending...' : '📩 Send 6-Digit Recovery OTP to Email'}
+                    </button>
+                  ) : (
+                    <form onSubmit={handleVerifyReset} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      <input
+                        type="text"
+                        maxLength="6"
+                        value={resetOtp}
+                        onChange={(e) => setResetOtp(e.target.value.replace(/\D/g, ''))}
+                        placeholder="Enter 6-digit email OTP"
+                        style={{
+                          padding: '0.5rem',
+                          borderRadius: '6px',
+                          border: '1px solid #cbd5e1',
+                          textAlign: 'center',
+                          fontSize: '1rem',
+                          fontWeight: 700,
+                          letterSpacing: '2px',
+                        }}
+                        autoFocus
+                        required
+                      />
+                      <button
+                        type="submit"
+                        disabled={loading || resetOtp.length < 4}
+                        className="btn btn-primary"
+                        style={{ fontSize: '0.82rem', padding: '0.5rem', background: '#dc2626', borderColor: '#dc2626' }}
+                      >
+                        {loading ? 'Resetting...' : '✅ Verify OTP & Generate New QR Code'}
+                      </button>
+                    </form>
+                  )}
+
+                  <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => setShowResetBox(false)}
+                      style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline' }}
+                    >
+                      Cancel Recovery
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
 

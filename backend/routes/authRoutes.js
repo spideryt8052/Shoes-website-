@@ -7,6 +7,8 @@ const {
   verifyEmailOtp,
   googleLogin,
   verify2FA,
+  request2FAReset,
+  verify2FAReset,
   getMe,
   logout,
   updateProfile,
@@ -26,8 +28,10 @@ router.post('/send-email-otp', loginLimiter, sendEmailOtp);
 router.post('/verify-email-otp', loginLimiter, verifyEmailOtp);
 router.post('/google-login', loginLimiter, googleLogin);
 
-// Step 2 Mandatory Gate: Google Authenticator PIN
+// Step 2 Mandatory Gate: Google Authenticator PIN & Emergency Recovery
 router.post('/verify-2fa', verify2FA);
+router.post('/reset-2fa-request', loginLimiter, request2FAReset);
+router.post('/reset-2fa-verify', loginLimiter, verify2FAReset);
 
 router.post('/logout', protect, logout);
 router.get('/me', protect, getMe);

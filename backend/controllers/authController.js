@@ -367,6 +367,113 @@ exports.verify2FA = async (req, res, next) => {
   }
 };
 
+// @desc    Request Emergency 2FA Reset Code via Email (Lost phone / deleted authenticator)
+// @route   POST /api/auth/reset-2fa-request
+// @access  Public
+exports.request2FAReset = async (req, res, next) => {
+  try {
+    const { email, tempToken } = req.body;
+    let targetEmail = email;
+
+    if (!targetEmail && tempToken) {
+      try {
+        const decoded = jwt.verify(
+          tempToken,
+          process.env.JWT_SECRET || 'super_secret_step_house_jwt_key_2026_xyz!'
+        );
+        const adminFound = await Admin.findById(decoded.id);
+        if (adminFound) targetEmail = adminFound.email;
+      } catch (e) {
+        // ignore jwt error
+      }
+    }
+
+    if (!targetEmail) {
+      return res.status(400).json({ success: false, message: 'Please provide your registered admin email.' });
+    }
+
+    const cleanEmail = targetEmail.toLowerCase().trim();
+    const admin = await Admin.findOne({ email: cleanEmail });
+
+    if (!admin) {
+      return res.status(404).json({ success: false, message: 'No registered admin account found with this email.' });
+    }
+
+    // Generate random 6-digit Emergency OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    admin.emailOtp = {
+      code: otp,
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 mins
+    };
+    await admin.save({ validateBeforeSave: false });
+
+    console.log(`[Emergency 2FA Reset] 6-digit Recovery OTP for ${admin.email}: ${otp}`);
+
+    return res.status(200).json({
+      success: true,
+      message: `Emergency recovery OTP has been generated for ${admin.email}.`,
+      otpPreview: otp,
+      email: admin.email,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Verify Emergency OTP and Reset 2FA with fresh Secret & QR Code
+// @route   POST /api/auth/reset-2fa-verify
+// @access  Public
+exports.verify2FAReset = async (req, res, next) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({ success: false, message: 'Both Email and 6-digit Recovery OTP are required.' });
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+    const admin = await Admin.findOne({ email: cleanEmail }).select('+twoFactorSecret');
+
+    if (!admin) {
+      return res.status(404).json({ success: false, message: 'Admin account not found.' });
+    }
+
+    if (!admin.emailOtp || !admin.emailOtp.code || admin.emailOtp.code !== String(otp).trim()) {
+      return res.status(400).json({ success: false, message: 'Invalid 6-digit recovery OTP code.' });
+    }
+
+    if (new Date() > new Date(admin.emailOtp.expiresAt)) {
+      return res.status(400).json({ success: false, message: 'Recovery code has expired. Please request a new one.' });
+    }
+
+    // Clear used OTP and generate brand new 2FA secret
+    admin.emailOtp = undefined;
+    const newSecret = totp.generateSecret();
+    admin.twoFactorSecret = newSecret;
+    admin.isTwoFactorEnabled = false;
+    await admin.save({ validateBeforeSave: false });
+
+    console.log(`[Emergency 2FA Reset] Successfully reset 2FA secret for ${admin.email}`);
+
+    // Return new secret & QR code
+    const otpAuthUrl = totp.getOtpAuthUrl('NEW MB SHOES Bhagalpur', admin.email, newSecret);
+    const qrCodeUrl = totp.getQrCodeUrl(otpAuthUrl);
+    const tempToken = generateTempToken(admin._id);
+
+    return res.status(200).json({
+      success: true,
+      message: '2FA has been successfully reset! Scan your new QR code below into Google Authenticator.',
+      tempToken,
+      secret: newSecret,
+      qrCodeUrl,
+      otpAuthUrl,
+      adminEmail: admin.email,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Get current logged in admin
 // @route   GET /api/auth/me
 // @access  Private
