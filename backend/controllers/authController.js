@@ -253,8 +253,7 @@ exports.sendEmailOtp = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      message: 'A 6-digit verification code has been dispatched.',
-      otpPreview: otp,
+      message: `A 6-digit verification code has been sent to ${admin.email}. Please check your Gmail.`,
       email: admin.email,
     });
   } catch (error) {
@@ -479,9 +478,8 @@ exports.request2FAReset = async (req, res, next) => {
 
     return res.status(200).json({
       success: true,
-      message: `Emergency recovery OTP has been generated for ${admin.email}.`,
+      message: `Emergency recovery OTP has been sent to ${admin.email}. Please check your Gmail.`,
       email: admin.email,
-      otpPreview: otp,
     });
   } catch (error) {
     next(error);
