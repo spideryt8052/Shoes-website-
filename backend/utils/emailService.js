@@ -1,11 +1,17 @@
 const nodemailer = require('nodemailer');
 
-// Creates a reusable Gmail transporter
-const getTransporter = () => {
-  const user = (process.env.EMAIL_USER || process.env.GMAIL_USER || 'yaseenbrp25@gmail.com').trim();
+const getCredentials = () => {
+  const user = (process.env.EMAIL_USER || process.env.GMAIL_USER || 'yaseenbrp25@gmail.com').trim().replace(/["']/g, '');
   const pass = (process.env.EMAIL_PASS || process.env.GMAIL_APP_PASSWORD || process.env.GMAIL_PASS || 'tndkthxajxeutlbj')
     .trim()
-    .replace(/\s+/g, ''); // Remove spaces if user copied as "abcd efgh ijkl mnop"
+    .replace(/["'\s]/g, '');
+
+  return { user, pass };
+};
+
+// Creates a reusable Gmail transporter
+const getTransporter = () => {
+  const { user, pass } = getCredentials();
 
   if (!user || !pass) {
     return null;
@@ -86,9 +92,10 @@ const sendEmailOtpCode = async (toEmail, otp, purpose = 'Admin Counter Login') =
     console.log(`[EmailService] OTP sent successfully to ${toEmail}. MessageId: ${info.messageId}`);
     return { success: true, messageId: info.messageId };
   } catch (error) {
+    const creds = getCredentials();
     console.error(`[EmailService] Failed to send email to ${toEmail}:`, error.message);
-    const maskedUser = user ? user.slice(0, 3) + '***' : 'none';
-    const maskedPass = pass ? pass.slice(0, 2) + '***' + pass.slice(-2) + ` (len=${pass.length})` : 'none';
+    const maskedUser = creds.user ? creds.user.slice(0, 3) + '***' : 'none';
+    const maskedPass = creds.pass ? creds.pass.slice(0, 2) + '***' + creds.pass.slice(-2) + ` (len=${creds.pass.length})` : 'none';
     return { success: false, error: `${error.message} [auth: user=${maskedUser}, pass=${maskedPass}]` };
   }
 };
