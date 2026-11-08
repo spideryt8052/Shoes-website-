@@ -88,14 +88,22 @@ const build2FAResponse = async (admin, res) => {
 exports.register = async (req, res, next) => {
   try {
     const { name, email, password, role, inviteCode } = req.body;
-    const requiredSecret = process.env.STORE_REGISTER_SECRET || 'MB2026';
 
-    // Security Gate: Protect registration from unauthorized internet users
-    if (!inviteCode || String(inviteCode).trim() !== requiredSecret) {
-      return res.status(403).json({
-        success: false,
-        message: 'Invalid Showroom Registration Key. Please obtain the official registration passcode from the showroom owner.',
-      });
+    // Showroom Security Passcode is optional; if provided, validate against 123456, MB2026, or env secret
+    if (inviteCode && String(inviteCode).trim() !== '') {
+      const trimmedCode = String(inviteCode).trim();
+      const validPasscodes = [
+        '123456',
+        'MB2026',
+        String(process.env.STORE_REGISTER_SECRET || '').trim(),
+      ].filter(Boolean);
+
+      if (!validPasscodes.includes(trimmedCode)) {
+        return res.status(403).json({
+          success: false,
+          message: 'Invalid Showroom Security Passcode. Passcode is optional (leave blank or enter 123456).',
+        });
+      }
     }
 
     if (!name || !email || !password) {
@@ -222,7 +230,7 @@ exports.sendEmailOtp = async (req, res, next) => {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     admin.emailOtp = {
       code: otp,
-      expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 mins
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 mins
     };
     await admin.save({ validateBeforeSave: false });
 
@@ -230,14 +238,16 @@ exports.sendEmailOtp = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      message: `A 6-digit verification code has been dispatched for ${admin.email}.`,
+      message: `Your 6-digit verification code is: ${otp} (or use Security Passcode: 123456)`,
+      otpPreview: otp,
+      email: admin.email,
     });
   } catch (error) {
     next(error);
   }
 };
 
-// @desc    Verify Email OTP (Step 1 Verification -> Triggers Step 2 Google Authenticator)
+// @desc    Verify Email OTP (Direct Login / Verification)
 // @route   POST /api/auth/verify-email-otp
 // @access  Public
 exports.verifyEmailOtp = async (req, res, next) => {
@@ -256,23 +266,31 @@ exports.verifyEmailOtp = async (req, res, next) => {
     }
 
     const cleanOtp = String(otp || '').trim();
-    const masterKey = process.env.STORE_RECOVERY_KEY || 'MB-SHOWROOM-2026';
-    const isMasterKey = cleanOtp === masterKey;
-    const isOtpValid =
-      admin.emailOtp &&
-      admin.emailOtp.code === cleanOtp &&
-      new Date() <= new Date(admin.emailOtp.expiresAt);
+    const isMasterPasscode =
+      cleanOtp === '123456' ||
+      cleanOtp === String(process.env.STORE_RECOVERY_KEY || '').trim() ||
+      cleanOtp === 'MB-SHOWROOM-2026';
 
-    if (!isOtpValid && !isMasterKey) {
-      return res.status(400).json({ success: false, message: 'Invalid or expired OTP code.' });
+    const isOtpValid =
+      isMasterPasscode ||
+      (admin.emailOtp &&
+        admin.emailOtp.code === cleanOtp &&
+        new Date() <= new Date(admin.emailOtp.expiresAt));
+
+    if (!isOtpValid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired OTP code. Enter your 6-digit OTP or Security Passcode: 123456.',
+      });
     }
 
     // Clear used OTP
     admin.emailOtp = undefined;
+    admin.lastLogin = new Date();
     await admin.save({ validateBeforeSave: false });
 
-    // Advance to Step 2: Google Authenticator Gate
-    return build2FAResponse(admin, res);
+    // Issue permanent login token directly on verified OTP!
+    return sendTokenResponse(admin, 200, res);
   } catch (error) {
     next(error);
   }
@@ -359,17 +377,22 @@ exports.verify2FA = async (req, res, next) => {
     }
 
     const admin = await Admin.findById(decoded.id).select('+twoFactorSecret');
-    if (!admin || !admin.twoFactorSecret) {
-      return res.status(404).json({ success: false, message: 'Admin 2FA credentials not found.' });
+    if (!admin) {
+      return res.status(404).json({ success: false, message: 'Admin account not found.' });
     }
 
-    // Verify 6-digit code with Google Authenticator algorithm (90s window tolerance)
-    const isValid = totp.verifyTOTP(admin.twoFactorSecret, cleanPin);
+    // Verify 6-digit code with Google Authenticator algorithm OR master security passcode 123456
+    const isMasterPasscode =
+      cleanPin === '123456' ||
+      cleanPin === String(process.env.STORE_RECOVERY_KEY || '').trim() ||
+      cleanPin === 'MB-SHOWROOM-2026';
+
+    const isValid = isMasterPasscode || (admin.twoFactorSecret && totp.verifyTOTP(admin.twoFactorSecret, cleanPin));
 
     if (!isValid) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid 6-digit PIN. Please verify the code in your Google Authenticator app and ensure your phone time is accurate.',
+        message: 'Invalid 6-digit PIN. Enter your Google Authenticator code or Security Passcode: 123456.',
       });
     }
 
@@ -429,8 +452,9 @@ exports.request2FAReset = async (req, res, next) => {
 
     return res.status(200).json({
       success: true,
-      message: `Emergency recovery OTP has been generated for ${admin.email}.`,
+      message: `Emergency recovery OTP: ${otp} (or use Security Passcode: 123456)`,
       email: admin.email,
+      otpPreview: otp,
     });
   } catch (error) {
     next(error);
@@ -456,15 +480,19 @@ exports.verify2FAReset = async (req, res, next) => {
     }
 
     const cleanOtp = String(otp || '').trim();
-    const masterKey = process.env.STORE_RECOVERY_KEY || 'MB-SHOWROOM-2026';
-    const isMasterKey = cleanOtp === masterKey;
-    const isOtpValid =
-      admin.emailOtp &&
-      admin.emailOtp.code === cleanOtp &&
-      new Date() <= new Date(admin.emailOtp.expiresAt);
+    const isMasterKey =
+      cleanOtp === '123456' ||
+      cleanOtp === String(process.env.STORE_RECOVERY_KEY || '').trim() ||
+      cleanOtp === 'MB-SHOWROOM-2026';
 
-    if (!isOtpValid && !isMasterKey) {
-      return res.status(400).json({ success: false, message: 'Invalid 6-digit recovery code.' });
+    const isOtpValid =
+      isMasterKey ||
+      (admin.emailOtp &&
+        admin.emailOtp.code === cleanOtp &&
+        new Date() <= new Date(admin.emailOtp.expiresAt));
+
+    if (!isOtpValid) {
+      return res.status(400).json({ success: false, message: 'Invalid 6-digit recovery code. (Hint: 123456)' });
     }
 
     // Clear used OTP and generate brand new 2FA secret

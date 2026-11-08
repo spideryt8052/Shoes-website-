@@ -145,7 +145,7 @@ const AdminLogin = () => {
     setError('');
 
     if (!emailOtp || emailOtp.length < 6) {
-      setError('Please enter the 6-digit OTP code.');
+      setError('Please enter the 6-digit OTP code or Passcode: 123456.');
       return;
     }
 
@@ -156,7 +156,10 @@ const AdminLogin = () => {
         otp: emailOtp.trim(),
       });
 
-      if (res.data.success && res.data.require2FA) {
+      if (res.data.success && res.data.token) {
+        saveSession(res.data.token, res.data.admin);
+        navigate('/admin/dashboard', { replace: true });
+      } else if (res.data.success && res.data.require2FA) {
         setTempToken(res.data.tempToken);
         setAdminEmail(res.data.adminEmail || email);
 
@@ -475,13 +478,13 @@ const AdminLogin = () => {
                 ) : (
                   <form onSubmit={handleVerifyEmailOtp} style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                     <div className="form-group">
-                      <label>Enter 6-Digit Email OTP</label>
+                      <label>Enter 6-Digit Email OTP (or Passcode: 123456)</label>
                       <input
                         type="text"
                         maxLength="6"
                         value={emailOtp}
                         onChange={(e) => setEmailOtp(e.target.value.replace(/\D/g, ''))}
-                        placeholder="000000"
+                        placeholder="123456"
                         className="pin-input-big"
                         autoFocus
                         required
@@ -493,7 +496,7 @@ const AdminLogin = () => {
                       className="btn btn-primary btn-block btn-lg"
                       disabled={loading || emailOtp.length !== 6}
                     >
-                      {loading ? 'Verifying...' : 'Verify OTP & Continue →'}
+                      {loading ? 'Verifying...' : 'Verify & Enter Dashboard 🚀'}
                     </button>
 
                     <button
@@ -546,6 +549,7 @@ const AdminLogin = () => {
               <div className="helper-header">NEW MB SHOES Owner Account:</div>
               <code>Email: yaseen@newmbshoes.com</code>
               <code>Password: adminpassword123</code>
+              <code>Security Passcode: 123456</code>
             </div>
 
             {/* Links */}
@@ -578,7 +582,7 @@ const AdminLogin = () => {
             <div style={{ textAlign: 'center', padding: '0.75rem 0' }}>
               <FiSmartphone size={44} style={{ color: '#0f172a', marginBottom: '0.5rem' }} />
               <p style={{ fontSize: '0.92rem', color: '#334155', margin: 0, fontWeight: 500 }}>
-                Open <strong>Google Authenticator</strong> on your phone and enter your live 6-digit PIN:
+                Open <strong>Google Authenticator</strong> on phone (or enter <strong>Passcode: 123456</strong>):
               </p>
             </div>
 
@@ -589,7 +593,7 @@ const AdminLogin = () => {
                   maxLength="6"
                   value={totpCode}
                   onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ''))}
-                  placeholder="000000"
+                  placeholder="123456"
                   className="pin-input-big"
                   autoFocus
                   required

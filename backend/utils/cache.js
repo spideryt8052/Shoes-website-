@@ -40,3 +40,4 @@ const clearAll = () => {
 };
 
 module.exports = { get, set, clearTag, clearAll };
+

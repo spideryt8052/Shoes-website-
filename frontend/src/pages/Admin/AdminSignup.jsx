@@ -80,11 +80,6 @@ const AdminSignup = () => {
       return;
     }
 
-    if (!inviteCode.trim()) {
-      setError('Please enter the showroom security registration passcode.');
-      return;
-    }
-
     try {
       setLoading(true);
       const res = await api.post('/auth/register', {
@@ -92,7 +87,7 @@ const AdminSignup = () => {
         email: email.trim().toLowerCase(),
         password,
         role,
-        inviteCode: inviteCode.trim(),
+        inviteCode: inviteCode.trim() || '123456',
       });
 
       if (res.data.success && res.data.require2FA) {
@@ -307,9 +302,9 @@ const AdminSignup = () => {
                 </div>
               </div>
 
-              {/* Showroom Security Passcode */}
+              {/* Showroom Security Passcode (Optional) */}
               <div className="form-group">
-                <label htmlFor="admin-invite-code">Showroom Security Passcode *</label>
+                <label htmlFor="admin-invite-code">Showroom Security Passcode (Optional - Default: 123456)</label>
                 <div className="input-with-icon">
                   <FiShield className="input-icon" />
                   <input
@@ -317,12 +312,11 @@ const AdminSignup = () => {
                     type="password"
                     value={inviteCode}
                     onChange={(e) => setInviteCode(e.target.value)}
-                    placeholder="Enter Store Passcode (e.g. MB2026)"
-                    required
+                    placeholder="Optional: 123456 (or leave blank)"
                   />
                 </div>
-                <small style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
-                  Required to prevent unauthorized accounts. Obtain from the showroom owner.
+                <small style={{ color: 'var(--text-muted)', fontSize: '0.78rem', marginTop: '4px', display: 'block' }}>
+                  Yeh passcode optional hai. Aap ise khali chhod sakte hain ya <strong>123456</strong> enter kar sakte hain.
                 </small>
               </div>
 
@@ -397,14 +391,14 @@ const AdminSignup = () => {
             <form onSubmit={handleVerifyInitial2FA} className="login-form">
               <div className="form-group">
                 <label style={{ textAlign: 'center', fontWeight: 700 }}>
-                  Enter 6-Digit PIN from your phone app:
+                  Enter 6-Digit PIN from phone app (or Security Passcode: 123456):
                 </label>
                 <input
                   type="text"
                   maxLength="6"
                   value={totpCode}
                   onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ''))}
-                  placeholder="000000"
+                  placeholder="123456"
                   className="pin-input-big"
                   autoFocus
                   required
