@@ -4,6 +4,7 @@ const Sale = require('../models/Sale');
 const StockHistory = require('../models/StockHistory');
 const StoreSettings = require('../models/StoreSettings');
 const { pushToGoogleSheet, GOOGLE_APPS_SCRIPT_TEMPLATE } = require('../services/googleSheetsService');
+const { generateInvoicePDF } = require('../utils/pdfGenerator');
 
 // Helper to generate Invoice Number (Prefixed with MB for NEW MB SHOES)
 const generateInvoiceNumber = () => {
@@ -537,6 +538,8 @@ exports.getWhatsAppBill = async (req, res, next) => {
       ? `Dear *${sale.customerName}*,`
       : 'Dear Customer,';
 
+    const pdfDownloadUrl = `https://shoes-website-yaseenbrp25-6387.vercel.app/api/sales/invoice/${sale.invoiceNumber}/pdf`;
+
     const billText = `🏪 *${storeName.toUpperCase()}*
 📍 _${storeAddress}_
 📞 Showroom Helpline: ${contactNo}
@@ -547,7 +550,7 @@ Date: ${dateFormatted} | ${timeFormatted}
 Cashier: ${sale.adminName || 'Counter POS'}
 ─────────────────────
 ${customerGreeting}
-Thank you for visiting *NEW MB SHOES Bhagalpur*! Here is your digital e-bill:
+Thank you for visiting *NEW MB SHOES Bhagalpur*! Here is your official e-bill & PDF receipt:
 
 👟 *PURCHASED ITEM*:
 • *${sale.productName}*
@@ -559,8 +562,11 @@ ${sale.discount > 0 ? `  Discount: -₹${sale.discount.toLocaleString('en-IN')}\
 💰 *TOTAL AMOUNT PAID: ₹${sale.totalAmount.toLocaleString('en-IN')}*
 💳 Payment Method: *${sale.paymentMethod}*
 ─────────────────────
+📄 *DOWNLOAD OFFICIAL PDF BILL & TAX INVOICE*:
+${pdfDownloadUrl}
+─────────────────────
 🛡️ *7-DAY SIZE EXCHANGE POLICY*:
-• Fit/size exchange is available within 7 days at any of our 3 Bhagalpur branches (Shah Market, Tatarpur, Tilkamanjhi) with this WhatsApp bill.
+• Fit/size exchange is available within 7 days at any of our 3 Bhagalpur branches (Shah Market, Tatarpur, Tilkamanjhi) with this PDF bill.
 • Shoes must be unworn and in original box packaging.
 
 ⭐ *How was your showroom trial experience? Review us on Google*:
@@ -577,9 +583,52 @@ ${reviewUrl}
       invoiceNumber: sale.invoiceNumber,
       customerPhone: sale.customerPhone,
       cleanPhone: formattedPhone,
+      pdfDownloadUrl,
       billText,
       whatsappUrl,
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Download / Stream branded PDF Invoice for a sale (Public for WhatsApp customers)
+// @route   GET /api/sales/invoice/:invoiceNumber/pdf or GET /api/sales/:id/pdf
+// @access  Public
+exports.downloadInvoicePDF = async (req, res, next) => {
+  try {
+    const { identifier, invoiceNumber, id } = req.params;
+    const searchTarget = identifier || invoiceNumber || id;
+
+    if (!searchTarget) {
+      return res.status(400).json({ success: false, message: 'Invoice number or ID is required' });
+    }
+
+    let sale;
+    if (searchTarget.match(/^[0-9a-fA-F]{24}$/)) {
+      sale = await Sale.findById(searchTarget);
+    }
+    if (!sale) {
+      sale = await Sale.findOne({ invoiceNumber: searchTarget });
+    }
+
+    if (!sale) {
+      return res.status(404).json({
+        success: false,
+        message: `Sale invoice '${searchTarget}' was not found in showroom records.`,
+      });
+    }
+
+    const settings = await StoreSettings.findOne();
+    const pdfBuffer = await generateInvoicePDF(sale, settings || {});
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `inline; filename="NEW-MB-SHOES-Invoice-${sale.invoiceNumber}.pdf"`
+    );
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    return res.send(pdfBuffer);
   } catch (error) {
     next(error);
   }

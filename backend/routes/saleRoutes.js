@@ -10,9 +10,14 @@ const {
   syncToGoogleSheets,
   getGoogleSheetScript,
   getWhatsAppBill,
+  downloadInvoicePDF,
 } = require('../controllers/saleController');
 
-// All sales routes require staff/admin login
+// Public route for customers to download their official PDF bill from WhatsApp
+router.get('/invoice/:invoiceNumber/pdf', downloadInvoicePDF);
+router.get('/:id/pdf', downloadInvoicePDF);
+
+// All other sales routes require staff/admin login
 router.use(protect);
 
 router.post('/', recordSale);

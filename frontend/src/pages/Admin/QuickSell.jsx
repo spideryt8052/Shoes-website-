@@ -60,6 +60,9 @@ ${sale.discount > 0 ? `  Showroom Discount: -₹${Number(sale.discount).toLocale
 💰 *TOTAL AMOUNT PAID: ₹${Number(sale.totalAmount).toLocaleString('en-IN')}*
 💳 Payment Method: *${sale.paymentMethod}*
 ───────────────────────
+📄 *DOWNLOAD OFFICIAL PDF BILL & TAX INVOICE*:
+https://shoes-website-yaseenbrp25-6387.vercel.app/api/sales/invoice/${sale.invoiceNumber}/pdf
+───────────────────────
 🛡️ *7-DAY SIZE EXCHANGE POLICY*:
 • Fit/size exchange is available within 7 days across our 3 Bhagalpur branches (Shah Market, Tatarpur, Tilkamanjhi) with this WhatsApp bill.
 • Shoes must be unworn and in original box packaging.
@@ -204,6 +207,12 @@ const QuickSell = () => {
     setTimeout(() => {
       window.print();
     }, 150);
+  };
+
+  // 1-Click Download Official Branded PDF Invoice
+  const handleDownloadPdf = (sale) => {
+    const url = `/api/sales/invoice/${sale.invoiceNumber}/pdf`;
+    window.open(url, '_blank');
   };
 
   // Open WhatsApp Preview Modal
@@ -385,6 +394,17 @@ const QuickSell = () => {
                 <FiMessageCircle /> Send WhatsApp Bill
               </button>
             )}
+
+            {/* 1-Click PDF Bill Download Button */}
+            <button
+              type="button"
+              className="btn btn-sm btn-outline"
+              style={{ borderColor: '#ef4444', color: '#b91c1c', fontWeight: 600 }}
+              onClick={() => handleDownloadPdf(saleResult.sale)}
+              title="Download Official Tax Invoice PDF"
+            >
+              <FiFileText /> Download PDF Bill
+            </button>
 
             {/* AI Bill Preview Button */}
             <button
@@ -802,6 +822,17 @@ const QuickSell = () => {
                         <FiPrinter size={12} /> Print
                       </button>
 
+                      {/* 1-Click PDF Download */}
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline"
+                        style={{ padding: '3px 6px', fontSize: '0.72rem', color: '#b91c1c', borderColor: '#fca5a5' }}
+                        title="Download Official Tax Invoice PDF"
+                        onClick={() => handleDownloadPdf(sale)}
+                      >
+                        <FiFileText size={12} /> PDF
+                      </button>
+
                       {/* 1-Click WhatsApp Direct Send */}
                       {sale.customerPhone && (
                         <button
@@ -956,13 +987,23 @@ const QuickSell = () => {
 
             {/* Modal Actions */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px' }}>
-              <button
-                type="button"
-                className="btn btn-sm btn-outline"
-                onClick={() => copyBillText(whatsAppModalData)}
-              >
-                {copiedBill ? <FiCheck color="#16a34a" /> : <FiCopy />} {copiedBill ? 'Copied!' : 'Copy Bill Text'}
-              </button>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline"
+                  onClick={() => copyBillText(whatsAppModalData)}
+                >
+                  {copiedBill ? <FiCheck color="#16a34a" /> : <FiCopy />} {copiedBill ? 'Copied!' : 'Copy Bill'}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline"
+                  style={{ borderColor: '#ef4444', color: '#b91c1c', fontWeight: 600 }}
+                  onClick={() => handleDownloadPdf(whatsAppModalData)}
+                >
+                  <FiFileText /> Download PDF
+                </button>
+              </div>
 
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button
