@@ -52,10 +52,20 @@ const AdminLogin = () => {
   const [copiedKey, setCopiedKey] = useState(false);
   const [showQrToggle, setShowQrToggle] = useState(false);
 
-  // Emergency 2FA Reset State (Lost phone / deleted authenticator)
-  const [showResetBox, setShowResetBox] = useState(false);
-  const [resetOtp, setResetOtp] = useState('');
-  const [resetOtpSent, setResetOtpSent] = useState(false);
+  // Dedicated Forgot Google Authenticator Flow State
+  const [isForgotFlow, setIsForgotFlow] = useState(false);
+  const [forgotStep, setForgotStep] = useState(1); // 1: Email OTP verification, 2: New QR Code setup
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotOtp, setForgotOtp] = useState('');
+  const [forgotOtpSent, setForgotOtpSent] = useState(false);
+  const [new2FAData, setNew2FAData] = useState({
+    secret: '',
+    qrCodeUrl: '',
+    tempToken: '',
+    adminEmail: '',
+  });
+  const [newTotpCode, setNewTotpCode] = useState('');
+  const [copiedNewKey, setCopiedNewKey] = useState(false);
 
   // If already authenticated, redirect to dashboard
   useEffect(() => {
@@ -222,66 +232,129 @@ const AdminLogin = () => {
     }
   };
 
-  // Handle Emergency 2FA Reset: Request OTP via email
-  const handleRequestReset = async () => {
+  // Start Dedicated Forgot Authenticator Flow
+  const startForgotFlow = () => {
     setError('');
     setSuccessMsg('');
-    const targetEmail = twoFactorConfig.adminEmail || email;
+    setIsForgotFlow(true);
+    setForgotStep(1);
+    setForgotEmail(twoFactorConfig.adminEmail || email || 'yaseen@newmbshoes.com');
+    setForgotOtp('');
+    setForgotOtpSent(false);
+  };
+
+  // Cancel Forgot Flow and return to standard login
+  const cancelForgotFlow = () => {
+    setIsForgotFlow(false);
+    setForgotStep(1);
+    setError('');
+    setSuccessMsg('');
+  };
+
+  // Step 1 of Forgot Flow: Send 6-digit Recovery OTP to Email
+  const handleSendForgotOtp = async (e) => {
+    e?.preventDefault();
+    setError('');
+    setSuccessMsg('');
+
+    if (!forgotEmail) {
+      setError('Please enter your registered admin email address.');
+      return;
+    }
 
     try {
       setLoading(true);
       const res = await api.post('/auth/reset-2fa-request', {
-        email: targetEmail,
+        email: forgotEmail.trim().toLowerCase(),
         tempToken,
       });
 
       if (res.data.success) {
-        setResetOtpSent(true);
-        setSuccessMsg(res.data.message || `Recovery code sent to ${targetEmail}`);
+        setForgotOtpSent(true);
+        setSuccessMsg(res.data.message || `A 6-digit recovery OTP has been sent to ${forgotEmail}.`);
+        if (res.data.otpPreview) {
+          setForgotOtp(res.data.otpPreview);
+        }
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to send recovery OTP.');
+      setError(err.response?.data?.message || 'Failed to send recovery OTP. Please check email address.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Handle Emergency 2FA Reset: Verify OTP and get brand new QR Code & Secret
-  const handleVerifyReset = async (e) => {
+  // Step 1 of Forgot Flow: Verify Email OTP -> ONLY THEN generate and display new QR Code
+  const handleVerifyForgotOtp = async (e) => {
     e.preventDefault();
     setError('');
     setSuccessMsg('');
-    const targetEmail = twoFactorConfig.adminEmail || email;
 
-    if (!resetOtp || resetOtp.trim().length < 4) {
-      setError('Please enter the 6-digit recovery OTP.');
+    if (!forgotOtp || forgotOtp.trim().length !== 6) {
+      setError('Please enter the 6-digit recovery OTP sent to your email.');
       return;
     }
 
     try {
       setLoading(true);
       const res = await api.post('/auth/reset-2fa-verify', {
-        email: targetEmail,
-        otp: resetOtp.trim(),
+        email: forgotEmail.trim().toLowerCase(),
+        otp: forgotOtp.trim(),
       });
 
       if (res.data.success) {
-        setTempToken(res.data.tempToken);
-        setTwoFactorConfig({
-          isConfigured: false,
+        // Email OTP is verified! Revoke old code and set up new 2FA credentials
+        setNew2FAData({
           secret: res.data.secret,
           qrCodeUrl: res.data.qrCodeUrl,
-          adminEmail: res.data.adminEmail || targetEmail,
+          tempToken: res.data.tempToken,
+          adminEmail: res.data.adminEmail || forgotEmail,
         });
-        setShowResetBox(false);
-        setShowQrToggle(true);
-        setResetOtp('');
-        setSuccessMsg('2FA Reset Successful! Please scan your new QR code into Google Authenticator.');
+        setForgotStep(2); // ONLY NOW advance to Step 2 with brand new QR code!
+        setSuccessMsg('Email OTP Verified! Old authenticator code has been revoked. Scan your new QR code below:');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Invalid or expired recovery code.');
+      setError(err.response?.data?.message || 'Invalid or expired OTP code. Please check your email.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Step 2 of Forgot Flow: Verify 6-digit PIN from newly scanned Authenticator -> Login!
+  const handleVerifyNew2FA = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    if (!newTotpCode || newTotpCode.trim().length !== 6) {
+      setError('Please enter the 6-digit code from Google Authenticator.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const res = await api.post('/auth/verify-2fa', {
+        tempToken: new2FAData.tempToken,
+        totpCode: newTotpCode.trim(),
+      });
+
+      if (res.data.success && res.data.token) {
+        saveSession(res.data.token, res.data.admin);
+        navigate('/admin/dashboard', { replace: true });
+      }
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+          'Invalid 6-digit PIN. Please verify code from your phone app.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copyNewSecretKey = () => {
+    if (new2FAData.secret) {
+      navigator.clipboard.writeText(new2FAData.secret);
+      setCopiedNewKey(true);
+      setTimeout(() => setCopiedNewKey(false), 2000);
     }
   };
 
@@ -290,14 +363,18 @@ const AdminLogin = () => {
       <div className="admin-login-card">
         {/* Header */}
         <div className="login-header">
-          <div className="shield-icon-wrap">
-            <FiShield size={30} />
+          <div className="shield-icon-wrap" style={isForgotFlow ? { background: '#991b1b' } : {}}>
+            {isForgotFlow ? <FiKey size={28} /> : <FiShield size={30} />}
           </div>
           <h2>{storeSettings.shopName || 'NEW MB SHOES'}</h2>
           <p>
-            {step === 1
-              ? 'Authorized Owner & Admin Sign In'
-              : 'Step 2: Google Authenticator Security Gate'}
+            {isForgotFlow
+              ? (forgotStep === 1
+                  ? 'Forgot Authenticator - Step 1: Verify Email OTP'
+                  : 'Forgot Authenticator - Step 2: Scan New QR Code & Enter PIN')
+              : (step === 1
+                  ? 'Authorized Owner & Admin Sign In'
+                  : 'Step 2: Google Authenticator Security Gate')}
           </p>
         </div>
 
@@ -316,7 +393,191 @@ const AdminLogin = () => {
           </div>
         )}
 
-        {/* ================= STEP 1: PRIMARY LOGIN METHODS ================= */}
+        {/* ================= DEDICATED FORGOT GOOGLE AUTHENTICATOR RECOVERY FLOW ================= */}
+        {isForgotFlow ? (
+          <div className="forgot-flow-wrap">
+            {/* Phase 1: Email OTP Verification */}
+            {forgotStep === 1 && (
+              <div className="forgot-step-1">
+                <div style={{ textAlign: 'center', marginBottom: '1.2rem' }}>
+                  <FiKey size={36} style={{ color: '#dc2626', marginBottom: '0.4rem' }} />
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', margin: '0 0 0.3rem 0' }}>
+                    Forgot Authenticator Code?
+                  </h3>
+                  <p style={{ fontSize: '0.85rem', color: '#64748b', margin: 0 }}>
+                    Step 1 of 2: Verify your registered Admin Email with a 6-digit OTP. Naya QR Code email verify hone ke baad generate hoga.
+                  </p>
+                </div>
+
+                <form onSubmit={forgotOtpSent ? handleVerifyForgotOtp : handleSendForgotOtp} className="login-form">
+                  <div className="form-group">
+                    <label>Registered Admin Email Address</label>
+                    <div className="input-with-icon">
+                      <FiMail className="input-icon" />
+                      <input
+                        type="email"
+                        value={forgotEmail}
+                        onChange={(e) => setForgotEmail(e.target.value)}
+                        placeholder="yaseen@newmbshoes.com"
+                        required
+                        disabled={forgotOtpSent}
+                      />
+                    </div>
+                  </div>
+
+                  {!forgotOtpSent ? (
+                    <button
+                      type="button"
+                      onClick={handleSendForgotOtp}
+                      disabled={loading}
+                      className="btn btn-primary btn-block btn-lg"
+                      style={{ background: '#dc2626', borderColor: '#dc2626' }}
+                    >
+                      {loading ? 'Sending OTP...' : '📩 Send 6-Digit Verification OTP to Email'}
+                    </button>
+                  ) : (
+                    <>
+                      <div className="form-group">
+                        <label>Enter 6-Digit Email OTP</label>
+                        <input
+                          type="text"
+                          maxLength="6"
+                          value={forgotOtp}
+                          onChange={(e) => setForgotOtp(e.target.value.replace(/\D/g, ''))}
+                          placeholder="000000"
+                          className="pin-input-big"
+                          autoFocus
+                          required
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={loading || forgotOtp.length !== 6}
+                        className="btn btn-primary btn-block btn-lg"
+                        style={{ background: '#dc2626', borderColor: '#dc2626' }}
+                      >
+                        {loading ? 'Verifying...' : '✅ Verify Email OTP & Generate New QR Code →'}
+                      </button>
+
+                      <div style={{ textAlign: 'center', marginTop: '0.3rem' }}>
+                        <button
+                          type="button"
+                          onClick={handleSendForgotOtp}
+                          disabled={loading}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#2563eb',
+                            fontSize: '0.82rem',
+                            cursor: 'pointer',
+                            textDecoration: 'underline',
+                          }}
+                        >
+                          Didn't receive code? Resend OTP
+                        </button>
+                      </div>
+                    </>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={cancelForgotFlow}
+                    className="btn btn-outline btn-block"
+                    style={{ marginTop: '0.5rem' }}
+                  >
+                    ← Cancel & Return to Login
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {/* Phase 2: Brand New Authenticator Setup (ONLY DISPLAYED AFTER PHASE 1 EMAIL OTP IS VERIFIED!) */}
+            {forgotStep === 2 && (
+              <div className="forgot-step-2">
+                <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+                  <FiCheckCircle size={36} style={{ color: '#16a34a', marginBottom: '0.4rem' }} />
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a', margin: '0 0 0.3rem 0' }}>
+                    Setup New Authenticator
+                  </h3>
+                  <p style={{ fontSize: '0.85rem', color: '#64748b', margin: 0 }}>
+                    Step 2 of 2: Scan your brand-new QR code below into Google Authenticator on your phone.
+                  </p>
+                </div>
+
+                <div className="qr-code-box">
+                  <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a' }}>
+                    📱 Scan New QR Code with Phone App:
+                  </div>
+
+                  {new2FAData.qrCodeUrl && (
+                    <img
+                      src={new2FAData.qrCodeUrl}
+                      alt="Brand New Google Authenticator QR Code"
+                      className="qr-code-img"
+                    />
+                  )}
+
+                  <div className="manual-key-row">
+                    <span>New Secret Key:</span>
+                    <span className="manual-key-text">{new2FAData.secret}</span>
+                    <button
+                      type="button"
+                      onClick={copyNewSecretKey}
+                      className="btn btn-outline"
+                      style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }}
+                      title="Copy Secret Key"
+                    >
+                      {copiedNewKey ? <FiCheck color="#16a34a" /> : <FiCopy />}
+                    </button>
+                  </div>
+
+                  <p style={{ fontSize: '0.78rem', color: '#64748b', margin: 0 }}>
+                    Open Google Authenticator on your phone ➔ Tap '+' ➔ Scan this new QR code.
+                  </p>
+                </div>
+
+                <form onSubmit={handleVerifyNew2FA} className="login-form" style={{ marginTop: '1rem' }}>
+                  <div className="form-group">
+                    <label style={{ textAlign: 'center', fontSize: '0.9rem', fontWeight: 700 }}>
+                      Enter 6-Digit PIN from your new phone code:
+                    </label>
+                    <input
+                      type="text"
+                      maxLength="6"
+                      value={newTotpCode}
+                      onChange={(e) => setNewTotpCode(e.target.value.replace(/\D/g, ''))}
+                      placeholder="000000"
+                      className="pin-input-big"
+                      autoFocus
+                      required
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="btn btn-primary btn-block btn-lg"
+                    disabled={loading || newTotpCode.length !== 6}
+                  >
+                    {loading ? 'Verifying PIN...' : 'Verify New PIN & Enter Dashboard 🚀'}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={cancelForgotFlow}
+                    className="btn btn-outline btn-block"
+                    style={{ marginTop: '0.4rem' }}
+                  >
+                    ← Return to Login
+                  </button>
+                </form>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* ================= NORMAL LOGIN FLOW (STEP 1 & STEP 2) ================= */
+          <>
+            {/* ================= STEP 1: PRIMARY LOGIN METHODS ================= */}
         {step === 1 && (
           <>
             {/* Tabs */}
@@ -521,6 +782,25 @@ const AdminLogin = () => {
                 Sign Up / Register Here →
               </Link>
             </div>
+
+            {/* Forgot Authenticator Direct Link */}
+            <div style={{ textAlign: 'center', marginTop: '0.8rem' }}>
+              <button
+                type="button"
+                onClick={startForgotFlow}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#dc2626',
+                  fontSize: '0.82rem',
+                  cursor: 'pointer',
+                  textDecoration: 'underline',
+                  fontWeight: 600,
+                }}
+              >
+                🔑 Google Authenticator Code Bhool Gaye? Reset via Email OTP →
+              </button>
+            </div>
           </>
         )}
 
@@ -643,88 +923,34 @@ const AdminLogin = () => {
               </button>
             </form>
 
-            {/* Emergency Recovery / Reset 2FA */}
+            {/* Dedicated Forgot Authenticator Button */}
             <div style={{ marginTop: '1rem', borderTop: '1px dashed #cbd5e1', paddingTop: '0.8rem', textAlign: 'center' }}>
-              {!showResetBox ? (
-                <button
-                  type="button"
-                  onClick={() => setShowResetBox(true)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#dc2626',
-                    fontSize: '0.82rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    textDecoration: 'underline',
-                  }}
-                >
-                  🚨 Phone kho gaya ya Authenticator code delete ho gaya? Reset 2FA with Email OTP
-                </button>
-              ) : (
-                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '0.9rem', textAlign: 'left' }}>
-                  <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#991b1b', marginBottom: '0.3rem' }}>
-                    🚨 Emergency 2FA Account Recovery
-                  </div>
-                  <p style={{ fontSize: '0.78rem', color: '#475569', margin: '0 0 0.6rem 0' }}>
-                    Aapke verified admin email (<strong>{twoFactorConfig.adminEmail || email}</strong>) par 6-digit recovery OTP bheja jayega. Isse purana Google Authenticator delete hokar naya QR Code generate ho jayega.
-                  </p>
-
-                  {!resetOtpSent ? (
-                    <button
-                      type="button"
-                      onClick={handleRequestReset}
-                      disabled={loading}
-                      className="btn btn-outline"
-                      style={{ fontSize: '0.82rem', padding: '0.4rem 0.8rem', width: '100%', borderColor: '#dc2626', color: '#dc2626' }}
-                    >
-                      {loading ? 'Sending...' : '📩 Send 6-Digit Recovery OTP to Email'}
-                    </button>
-                  ) : (
-                    <form onSubmit={handleVerifyReset} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                      <input
-                        type="text"
-                        maxLength="6"
-                        value={resetOtp}
-                        onChange={(e) => setResetOtp(e.target.value.replace(/\D/g, ''))}
-                        placeholder="Enter 6-digit email OTP"
-                        style={{
-                          padding: '0.5rem',
-                          borderRadius: '6px',
-                          border: '1px solid #cbd5e1',
-                          textAlign: 'center',
-                          fontSize: '1rem',
-                          fontWeight: 700,
-                          letterSpacing: '2px',
-                        }}
-                        autoFocus
-                        required
-                      />
-                      <button
-                        type="submit"
-                        disabled={loading || resetOtp.length < 4}
-                        className="btn btn-primary"
-                        style={{ fontSize: '0.82rem', padding: '0.5rem', background: '#dc2626', borderColor: '#dc2626' }}
-                      >
-                        {loading ? 'Resetting...' : '✅ Verify OTP & Generate New QR Code'}
-                      </button>
-                    </form>
-                  )}
-
-                  <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
-                    <button
-                      type="button"
-                      onClick={() => setShowResetBox(false)}
-                      style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline' }}
-                    >
-                      Cancel Recovery
-                    </button>
-                  </div>
-                </div>
-              )}
+              <button
+                type="button"
+                onClick={startForgotFlow}
+                style={{
+                  background: '#fff1f2',
+                  border: '1px solid #fecdd3',
+                  color: '#be123c',
+                  borderRadius: '8px',
+                  padding: '0.65rem 0.9rem',
+                  fontSize: '0.84rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.4rem',
+                }}
+              >
+                <FiKey /> Google Authenticator Code Bhool Gaye? Reset via Email OTP →
+              </button>
             </div>
           </div>
         )}
+      </>
+    )}
 
         <div className="login-footer">
           <Link to="/" className="back-to-store">
