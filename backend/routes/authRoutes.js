@@ -29,7 +29,7 @@ router.post('/verify-email-otp', loginLimiter, verifyEmailOtp);
 router.post('/google-login', loginLimiter, googleLogin);
 
 // Step 2 Mandatory Gate: Google Authenticator PIN & Emergency Recovery
-router.post('/verify-2fa', verify2FA);
+router.post('/verify-2fa', loginLimiter, verify2FA);
 router.post('/reset-2fa-request', loginLimiter, request2FAReset);
 router.post('/reset-2fa-verify', loginLimiter, verify2FAReset);
 

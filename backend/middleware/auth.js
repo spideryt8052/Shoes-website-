@@ -23,6 +23,14 @@ const protect = async (req, res, next) => {
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'super_secret_step_house_jwt_key_2026_xyz!');
 
+    // Security Gate: Reject temporary 2FA gate tokens! They cannot access protected APIs!
+    if (decoded.step === '2fa_required' || !decoded.role) {
+      return res.status(401).json({
+        success: false,
+        message: 'Two-factor authentication required. Please verify with your 6-digit Google Authenticator PIN.',
+      });
+    }
+
     // Find admin user
     const admin = await Admin.findById(decoded.id).select('-password');
     if (!admin || !admin.isActive) {

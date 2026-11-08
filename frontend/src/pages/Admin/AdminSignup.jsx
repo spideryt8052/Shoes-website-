@@ -41,6 +41,7 @@ const AdminSignup = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showroomBranch, setShowroomBranch] = useState('Shah Market (Main Flagship)');
   const [role, setRole] = useState('admin');
+  const [inviteCode, setInviteCode] = useState('');
 
   // Step 2 2FA Data
   const [tempToken, setTempToken] = useState('');
@@ -79,6 +80,11 @@ const AdminSignup = () => {
       return;
     }
 
+    if (!inviteCode.trim()) {
+      setError('Please enter the showroom security registration passcode.');
+      return;
+    }
+
     try {
       setLoading(true);
       const res = await api.post('/auth/register', {
@@ -86,6 +92,7 @@ const AdminSignup = () => {
         email: email.trim().toLowerCase(),
         password,
         role,
+        inviteCode: inviteCode.trim(),
       });
 
       if (res.data.success && res.data.require2FA) {
@@ -298,6 +305,25 @@ const AdminSignup = () => {
                     required
                   />
                 </div>
+              </div>
+
+              {/* Showroom Security Passcode */}
+              <div className="form-group">
+                <label htmlFor="admin-invite-code">Showroom Security Passcode *</label>
+                <div className="input-with-icon">
+                  <FiShield className="input-icon" />
+                  <input
+                    id="admin-invite-code"
+                    type="password"
+                    value={inviteCode}
+                    onChange={(e) => setInviteCode(e.target.value)}
+                    placeholder="Enter Store Passcode (e.g. MB2026)"
+                    required
+                  />
+                </div>
+                <small style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
+                  Required to prevent unauthorized accounts. Obtain from the showroom owner.
+                </small>
               </div>
 
               <button

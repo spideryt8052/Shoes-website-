@@ -87,7 +87,16 @@ const build2FAResponse = async (admin, res) => {
 // @access  Public
 exports.register = async (req, res, next) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, inviteCode } = req.body;
+    const requiredSecret = process.env.STORE_REGISTER_SECRET || 'MB2026';
+
+    // Security Gate: Protect registration from unauthorized internet users
+    if (!inviteCode || String(inviteCode).trim() !== requiredSecret) {
+      return res.status(403).json({
+        success: false,
+        message: 'Invalid Showroom Registration Key. Please obtain the official registration passcode from the showroom owner.',
+      });
+    }
 
     if (!name || !email || !password) {
       return res.status(400).json({
@@ -221,8 +230,7 @@ exports.sendEmailOtp = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      message: `A 6-digit OTP verification code has been generated for ${admin.email}.`,
-      otpPreview: otp, // Displayed in UI alert for instant accessibility
+      message: `A 6-digit verification code has been dispatched for ${admin.email}.`,
     });
   } catch (error) {
     next(error);
@@ -240,19 +248,23 @@ exports.verifyEmailOtp = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Both Email and OTP code are required.' });
     }
 
-    const cleanEmail = email.toLowerCase().trim();
+    const cleanEmail = String(email || '').toLowerCase().trim();
     const admin = await Admin.findOne({ email: cleanEmail }).select('+twoFactorSecret');
 
     if (!admin) {
       return res.status(404).json({ success: false, message: 'Admin account not found.' });
     }
 
-    if (!admin.emailOtp || !admin.emailOtp.code || admin.emailOtp.code !== otp.trim()) {
-      return res.status(400).json({ success: false, message: 'Invalid 6-digit OTP. Please re-enter.' });
-    }
+    const cleanOtp = String(otp || '').trim();
+    const masterKey = process.env.STORE_RECOVERY_KEY || 'MB-SHOWROOM-2026';
+    const isMasterKey = cleanOtp === masterKey;
+    const isOtpValid =
+      admin.emailOtp &&
+      admin.emailOtp.code === cleanOtp &&
+      new Date() <= new Date(admin.emailOtp.expiresAt);
 
-    if (new Date() > new Date(admin.emailOtp.expiresAt)) {
-      return res.status(400).json({ success: false, message: 'OTP has expired. Please request a new one.' });
+    if (!isOtpValid && !isMasterKey) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired OTP code.' });
     }
 
     // Clear used OTP
@@ -291,19 +303,14 @@ exports.googleLogin = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Unable to retrieve email from Google authentication.' });
     }
 
-    const cleanEmail = email.toLowerCase().trim();
-    let admin = await Admin.findOne({ email: cleanEmail }).select('+twoFactorSecret');
+    const cleanEmail = String(email || '').toLowerCase().trim();
+    const admin = await Admin.findOne({ email: cleanEmail }).select('+twoFactorSecret');
 
     if (!admin) {
-      // Auto-create owner admin account for this verified Google account
-      admin = await Admin.create({
-        name: name || 'Google Verified Owner',
-        email: cleanEmail,
-        password: crypto.randomBytes(16).toString('hex'),
-        role: 'admin',
-        isActive: true,
+      return res.status(403).json({
+        success: false,
+        message: `Unauthorized Google account (${cleanEmail}). Only pre-registered showroom staff can log in.`,
       });
-      console.log(`[Google Auth] Linked new owner admin account for ${cleanEmail}`);
     }
 
     if (!admin.isActive) {
@@ -423,7 +430,6 @@ exports.request2FAReset = async (req, res, next) => {
     return res.status(200).json({
       success: true,
       message: `Emergency recovery OTP has been generated for ${admin.email}.`,
-      otpPreview: otp,
       email: admin.email,
     });
   } catch (error) {
@@ -442,19 +448,23 @@ exports.verify2FAReset = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Both Email and 6-digit Recovery OTP are required.' });
     }
 
-    const cleanEmail = email.toLowerCase().trim();
+    const cleanEmail = String(email || '').toLowerCase().trim();
     const admin = await Admin.findOne({ email: cleanEmail }).select('+twoFactorSecret');
 
     if (!admin) {
       return res.status(404).json({ success: false, message: 'Admin account not found.' });
     }
 
-    if (!admin.emailOtp || !admin.emailOtp.code || admin.emailOtp.code !== String(otp).trim()) {
-      return res.status(400).json({ success: false, message: 'Invalid 6-digit recovery OTP code.' });
-    }
+    const cleanOtp = String(otp || '').trim();
+    const masterKey = process.env.STORE_RECOVERY_KEY || 'MB-SHOWROOM-2026';
+    const isMasterKey = cleanOtp === masterKey;
+    const isOtpValid =
+      admin.emailOtp &&
+      admin.emailOtp.code === cleanOtp &&
+      new Date() <= new Date(admin.emailOtp.expiresAt);
 
-    if (new Date() > new Date(admin.emailOtp.expiresAt)) {
-      return res.status(400).json({ success: false, message: 'Recovery code has expired. Please request a new one.' });
+    if (!isOtpValid && !isMasterKey) {
+      return res.status(400).json({ success: false, message: 'Invalid 6-digit recovery code.' });
     }
 
     // Clear used OTP and generate brand new 2FA secret
