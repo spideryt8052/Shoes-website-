@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const Admin = require('../models/Admin');
 const totp = require('../utils/totp');
+const { sendEmailOtpCode } = require('../utils/emailService');
 
 // Helper to generate JWT and send cookie
 const sendTokenResponse = (admin, statusCode, res) => {
@@ -236,6 +237,11 @@ exports.sendEmailOtp = async (req, res, next) => {
 
     console.log(`[Email OTP Notification] 6-digit OTP for ${admin.email}: ${otp}`);
 
+    // Send real email via Gmail SMTP
+    sendEmailOtpCode(admin.email, otp, 'Admin Counter Login').catch((err) =>
+      console.error('[sendEmailOtp] Background email error:', err)
+    );
+
     res.status(200).json({
       success: true,
       message: 'A 6-digit verification code has been dispatched.',
@@ -449,6 +455,11 @@ exports.request2FAReset = async (req, res, next) => {
     await admin.save({ validateBeforeSave: false });
 
     console.log(`[Emergency 2FA Reset] 6-digit Recovery OTP for ${admin.email}: ${otp}`);
+
+    // Send real email via Gmail SMTP
+    sendEmailOtpCode(admin.email, otp, 'Emergency 2FA Recovery').catch((err) =>
+      console.error('[request2FAReset] Background email error:', err)
+    );
 
     return res.status(200).json({
       success: true,
