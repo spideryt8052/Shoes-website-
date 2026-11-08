@@ -41,10 +41,23 @@ const generateTempToken = (adminId) => {
   );
 };
 
-// Helper to construct 2FA response (returns QR code & secret for seamless app scanning)
+// Helper to construct 2FA response
 const build2FAResponse = async (admin, res) => {
   const tempToken = generateTempToken(admin._id);
 
+  // If 2FA is already enabled, strictly prompt for 6-digit PIN. NEVER expose secret or QR code!
+  if (admin.isTwoFactorEnabled && admin.twoFactorSecret) {
+    return res.status(200).json({
+      success: true,
+      require2FA: true,
+      isConfigured: true,
+      tempToken,
+      adminEmail: admin.email,
+      message: 'Enter the 6-digit PIN from your Google Authenticator app.',
+    });
+  }
+
+  // First-time setup ONLY: newly created account that has never completed 2FA setup
   let secret = admin.twoFactorSecret;
   if (!secret) {
     secret = totp.generateSecret();
@@ -59,15 +72,13 @@ const build2FAResponse = async (admin, res) => {
   return res.status(200).json({
     success: true,
     require2FA: true,
-    isConfigured: !!admin.isTwoFactorEnabled,
+    isConfigured: false,
     tempToken,
     secret,
     qrCodeUrl,
     otpAuthUrl,
     adminEmail: admin.email,
-    message: admin.isTwoFactorEnabled
-      ? 'Enter the 6-digit code from Google Authenticator'
-      : 'Scan the QR code with Google Authenticator on your phone to link your account.',
+    message: 'First-time setup: Scan this QR code with Google Authenticator on your phone.',
   });
 };
 

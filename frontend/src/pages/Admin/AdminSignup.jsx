@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
-import './AdminLogin.css'; // Reuses clean login styles
+import './AdminLogin.css';
 
 // React Icons
 import {
@@ -14,61 +14,46 @@ import {
   FiAlertCircle,
   FiCopy,
   FiCheck,
-  FiSmartphone,
-  FiArrowRight,
-  FiUserPlus,
   FiHome,
+  FiUserPlus,
 } from 'react-icons/fi';
 
 const AdminSignup = () => {
   const navigate = useNavigate();
   const { isAuthenticated, saveSession } = useAuth();
 
-  // Multi-step registration flow:
-  // Step 1: Name, Email, Password, Role/Branch -> Creates Account & Generates 2FA Secret
-  // Step 2: Google Authenticator QR Code Setup & 6-Digit PIN Verification -> Final Access
-  const [step, setStep] = useState(1);
-
-  // Step 1 Form Data
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [role, setRole] = useState('admin');
-  const [showroomBranch, setShowroomBranch] = useState('Shah Market (Main Flagship)');
-
-  // Step 2 2FA Data
-  const [tempToken, setTempToken] = useState('');
-  const [totpCode, setTotpCode] = useState('');
-  const [twoFactorConfig, setTwoFactorConfig] = useState({
-    isConfigured: false,
-    secret: '',
-    qrCodeUrl: '',
-    adminEmail: '',
-  });
-
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
-  const [copiedKey, setCopiedKey] = useState(false);
-
-  // If already authenticated, redirect to dashboard
+  // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
       navigate('/admin/dashboard', { replace: true });
     }
   }, [isAuthenticated, navigate]);
 
-  // Copy 2FA Secret to Clipboard
-  const copySecretKey = () => {
-    if (twoFactorConfig.secret) {
-      navigator.clipboard.writeText(twoFactorConfig.secret);
-      setCopiedKey(true);
-      setTimeout(() => setCopiedKey(false), 2500);
-    }
-  };
+  // Clean 2-Phase State:
+  // 'REGISTER'   -> Step 1: Name, Email, Password, Branch & Role
+  // 'SETUP_2FA'  -> Step 2: Scan QR Code & Enter First 6-Digit PIN to activate
+  const [phase, setPhase] = useState('REGISTER');
 
-  // Handle Step 1: Submit Registration Form
+  // Step 1 Form Data
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showroomBranch, setShowroomBranch] = useState('Shah Market (Main Flagship)');
+  const [role, setRole] = useState('admin');
+
+  // Step 2 2FA Data
+  const [tempToken, setTempToken] = useState('');
+  const [setupData, setSetupData] = useState({ secret: '', qrCodeUrl: '' });
+  const [totpCode, setTotpCode] = useState('');
+  const [copiedKey, setCopiedKey] = useState(false);
+
+  // Status
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+
+  // Handle Step 1: Submit Registration
   const handleRegister = async (e) => {
     e.preventDefault();
     setError('');
@@ -105,14 +90,12 @@ const AdminSignup = () => {
 
       if (res.data.success && res.data.require2FA) {
         setTempToken(res.data.tempToken);
-        setTwoFactorConfig({
-          isConfigured: false,
+        setSetupData({
           secret: res.data.secret || '',
           qrCodeUrl: res.data.qrCodeUrl || '',
-          adminEmail: res.data.adminEmail || email,
         });
-        setSuccessMsg('Account created successfully! Now link Google Authenticator to secure your portal.');
-        setStep(2);
+        setSuccessMsg('Account created! Now scan the QR code to link Google Authenticator:');
+        setPhase('SETUP_2FA');
       }
     } catch (err) {
       setError(
@@ -123,40 +106,8 @@ const AdminSignup = () => {
     }
   };
 
-  // Handle Step 1: Alternative Google Sign-Up
-  const handleGoogleSignup = async () => {
-    setError('');
-    setSuccessMsg('');
-
-    const targetEmail = email || prompt('Enter your Google Account email for admin access:');
-    if (!targetEmail) return;
-
-    try {
-      setLoading(true);
-      const res = await api.post('/auth/google-login', {
-        email: targetEmail.trim().toLowerCase(),
-        name: name ? `${name.trim()} (${showroomBranch})` : 'Google Verified Admin',
-      });
-
-      if (res.data.success && res.data.require2FA) {
-        setTempToken(res.data.tempToken);
-        setTwoFactorConfig({
-          isConfigured: res.data.isConfigured,
-          secret: res.data.secret || '',
-          qrCodeUrl: res.data.qrCodeUrl || '',
-          adminEmail: res.data.adminEmail || targetEmail,
-        });
-        setStep(2);
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || 'Google account registration failed.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Handle Step 2: Verify Google Authenticator 6-Digit PIN -> Final Dashboard Access
-  const handleVerify2FA = async (e) => {
+  // Handle Step 2: Verify Initial 6-Digit PIN -> Final Dashboard Access
+  const handleVerifyInitial2FA = async (e) => {
     e.preventDefault();
     setError('');
 
@@ -179,26 +130,34 @@ const AdminSignup = () => {
     } catch (err) {
       setError(
         err.response?.data?.message ||
-          'Invalid or expired 6-digit PIN. Please re-check Google Authenticator and ensure your phone time is accurate.'
+          'Invalid 6-digit PIN. Please verify code in Google Authenticator.'
       );
     } finally {
       setLoading(false);
     }
   };
 
+  const copySecret = () => {
+    if (setupData.secret) {
+      navigator.clipboard.writeText(setupData.secret);
+      setCopiedKey(true);
+      setTimeout(() => setCopiedKey(false), 2000);
+    }
+  };
+
   return (
     <div className="admin-login-page">
       <div className="admin-login-card" style={{ maxWidth: '520px' }}>
-        {/* Header Branding */}
+        {/* Header */}
         <div className="login-header">
-          <div className="shield-icon-wrap" style={{ background: '#1e293b' }}>
-            {step === 1 ? <FiUserPlus size={28} /> : <FiShield size={28} />}
+          <div className="shield-icon-wrap" style={{ background: '#0f172a' }}>
+            {phase === 'REGISTER' ? <FiUserPlus size={28} /> : <FiShield size={28} />}
           </div>
           <h2>NEW MB SHOES</h2>
           <p>
-            {step === 1
-              ? 'Showroom Staff & Admin Registration'
-              : 'Link Google Authenticator (Step 2 Mandatory Security)'}
+            {phase === 'REGISTER'
+              ? 'Authorized Staff & Admin Registration'
+              : 'Link Google Authenticator (Step 2 Security)'}
           </p>
         </div>
 
@@ -217,8 +176,10 @@ const AdminSignup = () => {
           </div>
         )}
 
-        {/* ================= STEP 1: REGISTRATION FORM ================= */}
-        {step === 1 && (
+        {/* ============================================================== */}
+        {/* PHASE 1: REGISTRATION FORM                                    */}
+        {/* ============================================================== */}
+        {phase === 'REGISTER' && (
           <>
             <form onSubmit={handleRegister} className="login-form">
               {/* Full Name */}
@@ -253,9 +214,9 @@ const AdminSignup = () => {
                 </div>
               </div>
 
-              {/* Showroom Branch / Location */}
+              {/* Showroom Branch */}
               <div className="form-group">
-                <label htmlFor="admin-branch">Showroom Branch / Locality</label>
+                <label htmlFor="admin-branch">Showroom Branch</label>
                 <div className="input-with-icon">
                   <FiHome className="input-icon" />
                   <select
@@ -339,7 +300,6 @@ const AdminSignup = () => {
                 </div>
               </div>
 
-              {/* Submit Registration */}
               <button
                 type="submit"
                 className="btn btn-primary btn-block btn-lg login-submit-btn"
@@ -349,50 +309,11 @@ const AdminSignup = () => {
               </button>
             </form>
 
-            <div style={{ textAlign: 'center', margin: '1.2rem 0 0.8rem 0', color: '#64748b', fontSize: '0.85rem' }}>
-              ─── OR ───
-            </div>
-
-            {/* Google Signup Button */}
-            <button
-              type="button"
-              onClick={handleGoogleSignup}
-              className="google-login-btn"
-              disabled={loading}
-              style={{ width: '100%' }}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24">
-                <path
-                  fill="#4285F4"
-                  d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.65v3.05h3.9c2.28-2.1 3.645-5.18 3.645-9.14z"
-                />
-                <path
-                  fill="#34A853"
-                  d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.9-3.05c-1.08.72-2.45 1.16-4.03 1.16-3.1 0-5.74-2.1-6.68-4.93H1.26v3.13C3.25 21.36 7.33 24 12 24z"
-                />
-                <path
-                  fill="#FBBC05"
-                  d="M5.32 14.27c-.24-.73-.38-1.5-.38-2.27s.14-1.54.38-2.27V6.6H1.26A11.96 11.96 0 0 0 0 12c0 1.92.45 3.74 1.26 5.4l4.06-3.13z"
-                />
-                <path
-                  fill="#EA4335"
-                  d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.25 2.64 1.26 6.6l4.06 3.13c.94-2.83 3.58-4.98 6.68-4.98z"
-                />
-              </svg>
-              <span>{loading ? 'Processing...' : 'Sign up with Google Account'}</span>
-            </button>
-
-            {/* Switch to Login link */}
             <div style={{ textAlign: 'center', marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid #f1f5f9' }}>
               <span style={{ fontSize: '0.9rem', color: '#64748b' }}>Already have an admin account? </span>
               <Link
                 to="/admin/login"
-                style={{
-                  color: '#0f172a',
-                  fontWeight: 700,
-                  fontSize: '0.9rem',
-                  textDecoration: 'none',
-                }}
+                style={{ color: '#0f172a', fontWeight: 700, fontSize: '0.9rem', textDecoration: 'none' }}
               >
                 Log In Here →
               </Link>
@@ -400,23 +321,24 @@ const AdminSignup = () => {
           </>
         )}
 
-        {/* ================= STEP 2: MANDATORY GOOGLE AUTHENTICATOR SETUP ================= */}
-        {step === 2 && (
+        {/* ============================================================== */}
+        {/* PHASE 2: INITIAL 2FA SETUP (SCAN QR CODE & CONFIRM PIN)        */}
+        {/* ============================================================== */}
+        {phase === 'SETUP_2FA' && (
           <div className="two-factor-wrap">
             <div className="two-factor-banner">
               <FiCheckCircle size={20} />
-              <span>Step 1 Complete: {twoFactorConfig.adminEmail}</span>
+              <span>Account Created: {email}</span>
             </div>
 
-            {/* QR Code Card */}
             <div className="qr-code-box">
               <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a' }}>
-                📱 Link with Google Authenticator:
+                📱 Scan with Google Authenticator App:
               </div>
 
-              {twoFactorConfig.qrCodeUrl && (
+              {setupData.qrCodeUrl && (
                 <img
-                  src={twoFactorConfig.qrCodeUrl}
+                  src={setupData.qrCodeUrl}
                   alt="Google Authenticator QR Code"
                   className="qr-code-img"
                 />
@@ -424,10 +346,10 @@ const AdminSignup = () => {
 
               <div className="manual-key-row">
                 <span>Secret Key:</span>
-                <span className="manual-key-text">{twoFactorConfig.secret}</span>
+                <span className="manual-key-text">{setupData.secret}</span>
                 <button
                   type="button"
-                  onClick={copySecretKey}
+                  onClick={copySecret}
                   className="btn btn-outline"
                   style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }}
                   title="Copy Secret Key"
@@ -437,20 +359,19 @@ const AdminSignup = () => {
               </div>
 
               <div style={{ fontSize: '0.8rem', color: '#475569', textAlign: 'left', width: '100%', lineHeight: '1.4' }}>
-                <strong>Easy 3-step setup on your phone:</strong>
+                <strong>Easy 3 steps on your phone:</strong>
                 <ol style={{ paddingLeft: '1.2rem', margin: '0.4rem 0 0 0' }}>
-                  <li>Open <strong>Google Authenticator</strong> app on your Android or iPhone.</li>
-                  <li>Tap the <strong>+</strong> button ➔ select <strong>Scan a QR code</strong>.</li>
-                  <li>Scan this QR code and type the 6-digit code below to finish.</li>
+                  <li>Open <strong>Google Authenticator</strong> on your phone.</li>
+                  <li>Tap <strong>+</strong> ➔ <strong>Scan a QR code</strong>.</li>
+                  <li>Scan the QR code above and enter the 6-digit PIN below.</li>
                 </ol>
               </div>
             </div>
 
-            {/* Form for 6-Digit TOTP PIN */}
-            <form onSubmit={handleVerify2FA} className="login-form">
+            <form onSubmit={handleVerifyInitial2FA} className="login-form">
               <div className="form-group">
-                <label style={{ textAlign: 'center', fontSize: '0.9rem', fontWeight: 700 }}>
-                  Enter 6-Digit Code from Phone App:
+                <label style={{ textAlign: 'center', fontWeight: 700 }}>
+                  Enter 6-Digit PIN from your phone app:
                 </label>
                 <input
                   type="text"
@@ -469,26 +390,18 @@ const AdminSignup = () => {
                 className="btn btn-primary btn-block btn-lg"
                 disabled={loading || totpCode.length !== 6}
               >
-                {loading ? 'Verifying PIN...' : 'Verify PIN & Enter Admin Dashboard →'}
+                {loading ? 'Activating Account...' : 'Activate Account & Enter Dashboard 🚀'}
               </button>
-            </form>
 
-            <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
               <button
                 type="button"
-                onClick={() => setStep(1)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#64748b',
-                  fontSize: '0.85rem',
-                  cursor: 'pointer',
-                  textDecoration: 'underline',
-                }}
+                onClick={() => setPhase('REGISTER')}
+                className="btn btn-outline btn-block"
+                style={{ marginTop: '0.4rem' }}
               >
                 ← Back to registration details
               </button>
-            </div>
+            </form>
           </div>
         )}
       </div>
@@ -497,4 +410,3 @@ const AdminSignup = () => {
 };
 
 export default AdminSignup;
-
