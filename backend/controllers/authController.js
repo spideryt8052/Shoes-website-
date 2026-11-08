@@ -265,6 +265,7 @@ exports.sendEmailOtp = async (req, res, next) => {
       message: `A 6-digit verification code has been sent to ${admin.email}. Please check your Gmail.`,
       email: admin.email,
       emailDelivered,
+      emailWarning,
     });
   } catch (error) {
     next(error);
