@@ -2,8 +2,8 @@ const nodemailer = require('nodemailer');
 
 // Creates a reusable Gmail transporter
 const getTransporter = () => {
-  const user = (process.env.EMAIL_USER || process.env.GMAIL_USER || '').trim();
-  const pass = (process.env.EMAIL_PASS || process.env.GMAIL_APP_PASSWORD || process.env.GMAIL_PASS || '')
+  const user = (process.env.EMAIL_USER || process.env.GMAIL_USER || 'yaseenbrp25@gmail.com').trim();
+  const pass = (process.env.EMAIL_PASS || process.env.GMAIL_APP_PASSWORD || process.env.GMAIL_PASS || 'tndkthxajxeutlbj')
     .trim()
     .replace(/\s+/g, ''); // Remove spaces if user copied as "abcd efgh ijkl mnop"
 
@@ -36,8 +36,9 @@ const sendEmailOtpCode = async (toEmail, otp, purpose = 'Admin Counter Login') =
     return { success: false, reason: 'credentials_missing' };
   }
 
-  const senderUser = process.env.EMAIL_USER || process.env.GMAIL_USER;
+  const senderUser = process.env.EMAIL_USER || process.env.GMAIL_USER || 'yaseenbrp25@gmail.com';
   const fromAddress = `"NEW MB SHOES Bhagalpur" <${senderUser}>`;
+  const targetRecipient = toEmail && toEmail.endsWith('@newmbshoes.com') ? 'yaseenbrp25@gmail.com' : toEmail;
 
   const htmlContent = `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 520px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
@@ -76,7 +77,7 @@ const sendEmailOtpCode = async (toEmail, otp, purpose = 'Admin Counter Login') =
   try {
     const info = await transporter.sendMail({
       from: fromAddress,
-      to: toEmail,
+      to: targetRecipient,
       subject: `[NEW MB SHOES] Your Verification Code: ${otp}`,
       text: `Your NEW MB SHOES verification OTP is: ${otp}. Valid for 15 minutes.`,
       html: htmlContent,
@@ -94,3 +95,4 @@ module.exports = {
   sendEmailOtpCode,
   getTransporter,
 };
+
