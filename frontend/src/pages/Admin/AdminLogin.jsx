@@ -70,7 +70,7 @@ const AdminLogin = () => {
               <input
                 id="admin-email"
                 type="email"
-                placeholder="admin@stephouse.com"
+                placeholder="yaseen@newmbshoes.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -106,8 +106,8 @@ const AdminLogin = () => {
         </form>
 
         <div className="login-helper-box">
-          <div className="helper-header">Default Demo Credentials:</div>
-          <code>Email: admin@stephouse.com</code>
+          <div className="helper-header">NEW MB SHOES Owner Login:</div>
+          <code>Email: yaseen@newmbshoes.com</code>
           <code>Password: adminpassword123</code>
         </div>
 

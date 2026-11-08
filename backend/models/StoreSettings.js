@@ -107,6 +107,15 @@ const storeSettingsSchema = new mongoose.Schema(
       enabled: { type: Boolean, default: true },
       text: { type: String, default: '👟 Visit our physical showroom today to experience authentic comfort fit and seasonal discounts!' },
     },
+    heroBannerImage: {
+      type: String,
+      default: 'https://images.unsplash.com/photo-1552346154-21d32810aba3?w=1200&auto=format&fit=crop&q=80',
+    },
+    showroomPhotos: [
+      {
+        type: String,
+      },
+    ],
     branches: [
       {
         name: { type: String, required: true },

@@ -20,8 +20,11 @@ import './StoreSettingsView.css';
 const StoreSettingsView = () => {
   const { storeSettings, fetchSettings } = useStore();
   const [formData, setFormData] = useState({
-    shopName: 'STEP HOUSE',
+    shopName: 'NEW MB SHOES',
     tagline: '',
+    heroBannerImage: '',
+    showroomPhotos: [],
+    announcementBanner: { enabled: true, text: '' },
     address: '',
     city: '',
     state: '',
@@ -45,6 +48,7 @@ const StoreSettingsView = () => {
     branches: [],
   });
 
+  const [newPhotoUrl, setNewPhotoUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
 
@@ -53,6 +57,12 @@ const StoreSettingsView = () => {
       setFormData({
         shopName: storeSettings.shopName || 'NEW MB SHOES',
         tagline: storeSettings.tagline || '',
+        heroBannerImage: storeSettings.heroBannerImage || '',
+        showroomPhotos: Array.isArray(storeSettings.showroomPhotos) ? storeSettings.showroomPhotos : [],
+        announcementBanner: storeSettings.announcementBanner || {
+          enabled: true,
+          text: '📍 Visit NEW MB SHOES across our 3 showrooms in Bhagalpur (Shah Market, Tatarpur, Tilkamanjhi) for authentic branded footwear!',
+        },
         address: storeSettings.address || '',
         city: storeSettings.city || '',
         state: storeSettings.state || '',
@@ -124,6 +134,44 @@ const StoreSettingsView = () => {
         branches: prev.branches.filter((_, i) => i !== index),
       }));
     }
+  };
+
+  const handleAddShowroomPhoto = () => {
+    if (!newPhotoUrl.trim()) return;
+    setFormData((prev) => ({
+      ...prev,
+      showroomPhotos: [...(prev.showroomPhotos || []), newPhotoUrl.trim()],
+    }));
+    setNewPhotoUrl('');
+  };
+
+  const handleRemoveShowroomPhoto = (index) => {
+    setFormData((prev) => ({
+      ...prev,
+      showroomPhotos: (prev.showroomPhotos || []).filter((_, i) => i !== index),
+    }));
+  };
+
+  const handleAnnouncementToggle = (e) => {
+    const checked = e.target.checked;
+    setFormData((prev) => ({
+      ...prev,
+      announcementBanner: {
+        ...(prev.announcementBanner || {}),
+        enabled: checked,
+      },
+    }));
+  };
+
+  const handleAnnouncementTextChange = (e) => {
+    const text = e.target.value;
+    setFormData((prev) => ({
+      ...prev,
+      announcementBanner: {
+        ...(prev.announcementBanner || {}),
+        text,
+      },
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -218,6 +266,121 @@ const StoreSettingsView = () => {
               placeholder="Describe your retail footwear showroom..."
             />
           </div>
+        </div>
+
+        {/* Card: Homepage Banner & Top Announcement Bar */}
+        <div className="form-card">
+          <h3 className="card-section-title">🖼️ Homepage Banner & Announcement</h3>
+          <p className="card-subtitle">
+            Customize the main banner photo and the top announcement bar visible to all website visitors.
+          </p>
+
+          <div className="form-group">
+            <label>Homepage Hero Banner Image URL</label>
+            <input
+              type="text"
+              name="heroBannerImage"
+              value={formData.heroBannerImage}
+              onChange={handleChange}
+              placeholder="https://images.unsplash.com/... or your banner photo URL"
+            />
+            {formData.heroBannerImage && (
+              <div style={{ marginTop: '0.75rem', borderRadius: '8px', overflow: 'hidden', maxHeight: '180px', border: '1px solid #e2e8f0' }}>
+                <img
+                  src={formData.heroBannerImage}
+                  alt="Banner Preview"
+                  style={{ width: '100%', height: '180px', objectFit: 'cover' }}
+                  onError={(e) => { e.target.style.display = 'none'; }}
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="form-group" style={{ marginTop: '1.25rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+              <input
+                type="checkbox"
+                id="announcement-toggle"
+                checked={Boolean(formData.announcementBanner?.enabled)}
+                onChange={handleAnnouncementToggle}
+                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+              />
+              <label htmlFor="announcement-toggle" style={{ fontWeight: 600, cursor: 'pointer', margin: 0 }}>
+                Enable Top Announcement Bar (Offers / Timings)
+              </label>
+            </div>
+            <textarea
+              rows="2"
+              value={formData.announcementBanner?.text || ''}
+              onChange={handleAnnouncementTextChange}
+              placeholder="e.g. 📍 Visit NEW MB SHOES across our 3 showrooms in Bhagalpur (Shah Market, Tatarpur, Tilkamanjhi) for authentic branded footwear!"
+            />
+          </div>
+        </div>
+
+        {/* Card: Showroom Photos Gallery */}
+        <div className="form-card">
+          <h3 className="card-section-title">📸 Physical Showroom Photos Gallery</h3>
+          <p className="card-subtitle">
+            Add photos of your shop entrance, shoe display racks, and billing counter for customers to see.
+          </p>
+
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+            <input
+              type="text"
+              value={newPhotoUrl}
+              onChange={(e) => setNewPhotoUrl(e.target.value)}
+              placeholder="Paste photo image URL (e.g. https://...)"
+              style={{ flex: 1 }}
+            />
+            <button
+              type="button"
+              onClick={handleAddShowroomPhoto}
+              className="btn btn-outline"
+              style={{ whiteSpace: 'nowrap' }}
+            >
+              <FiPlus /> Add Photo
+            </button>
+          </div>
+
+          {formData.showroomPhotos && formData.showroomPhotos.length > 0 ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '0.75rem' }}>
+              {formData.showroomPhotos.map((url, idx) => (
+                <div key={idx} style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', border: '1px solid #cbd5e1', height: '110px' }}>
+                  <img
+                    src={url}
+                    alt={`Showroom ${idx + 1}`}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveShowroomPhoto(idx)}
+                    style={{
+                      position: 'absolute',
+                      top: '4px',
+                      right: '4px',
+                      background: 'rgba(239, 68, 68, 0.85)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: '24px',
+                      height: '24px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p style={{ color: '#94a3b8', fontSize: '0.9rem', fontStyle: 'italic' }}>
+              No showroom photos added yet. Paste image URLs above to showcase your physical showrooms.
+            </p>
+          )}
         </div>
 
         {/* Card 2: Contact & Operating Hours */}

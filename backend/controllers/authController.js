@@ -108,6 +108,41 @@ exports.logout = async (req, res) => {
   });
 };
 
+// @desc    Update current logged-in admin profile
+// @route   PUT /api/auth/profile
+// @access  Private
+exports.updateProfile = async (req, res, next) => {
+  try {
+    const { name, email, password } = req.body;
+    const admin = await Admin.findById(req.admin._id).select('+password');
+
+    if (!admin) {
+      return res.status(404).json({ success: false, message: 'Admin account not found' });
+    }
+
+    if (name && name.trim()) admin.name = name.trim();
+    if (email && email.trim()) admin.email = email.toLowerCase().trim();
+    if (password && password.trim().length >= 6) {
+      admin.password = password.trim();
+    }
+
+    await admin.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Admin profile updated successfully!',
+      admin: {
+        _id: admin._id,
+        name: admin.name,
+        email: admin.email,
+        role: admin.role,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Get all admin users
 // @route   GET /api/auth/users
 // @access  Private (Admin role only)

@@ -4,6 +4,7 @@ const {
   login,
   getMe,
   logout,
+  updateProfile,
   getAdmins,
   createAdmin,
   updateAdmin,
@@ -15,6 +16,7 @@ const { loginLimiter } = require('../middleware/rateLimiter');
 router.post('/login', loginLimiter, login);
 router.post('/logout', protect, logout);
 router.get('/me', protect, getMe);
+router.put('/profile', protect, updateProfile);
 
 // Admin user management (Admin only)
 router.route('/users')

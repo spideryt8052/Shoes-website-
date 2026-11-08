@@ -99,7 +99,7 @@ const Home = () => {
           <div className="hero-visual">
             <div className="hero-image-card">
               <img
-                src="https://images.unsplash.com/photo-1552346154-21d32810aba3?w=1000&auto=format&fit=crop&q=80"
+                src={storeSettings.heroBannerImage || "https://images.unsplash.com/photo-1552346154-21d32810aba3?w=1000&auto=format&fit=crop&q=80"}
                 alt="Shoe Showroom Collection"
                 className="hero-main-img"
               />
@@ -307,10 +307,33 @@ const Home = () => {
         </div>
       </section>
 
-      {/* 8. Google Reviews Section */}
+      {/* 8. Physical Showroom Gallery (if uploaded) */}
+      {storeSettings.showroomPhotos && storeSettings.showroomPhotos.length > 0 && (
+        <section className="showroom-gallery-section" style={{ padding: '3.5rem 0', background: '#f8fafc', borderTop: '1px solid #e2e8f0' }}>
+          <div className="container">
+            <div className="section-header text-center" style={{ marginBottom: '2rem' }}>
+              <span className="section-tag">Showroom Experience</span>
+              <h2 className="section-title">Take a Look Inside Our Stores</h2>
+              <p className="section-subtitle">
+                Visit our spacious showrooms, trial areas, and authentic branded footwear collections across Bhagalpur.
+              </p>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
+              {storeSettings.showroomPhotos.map((photo, i) => (
+                <div key={i} style={{ borderRadius: '12px', overflow: 'hidden', height: '220px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
+                  <img src={photo} alt={`Showroom Photo ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* 9. Google Reviews Section */}
       <GoogleReviews />
 
-      {/* 9. Store Location & Google Maps Section */}
+      {/* 10. Store Location & Google Maps Section */}
       <StoreLocation />
     </div>
   );
