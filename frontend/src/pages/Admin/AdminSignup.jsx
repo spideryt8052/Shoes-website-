@@ -90,7 +90,11 @@ const AdminSignup = () => {
         inviteCode: inviteCode.trim() || '123456',
       });
 
-      if (res.data.success && res.data.require2FA) {
+      if (res.data.success && res.data.token) {
+        saveSession(res.data.token, res.data.admin);
+        navigate('/admin/dashboard', { replace: true });
+        return;
+      } else if (res.data.success && res.data.require2FA) {
         setTempToken(res.data.tempToken);
         setSetupData({
           secret: res.data.secret || '',
@@ -322,7 +326,7 @@ const AdminSignup = () => {
                 className="btn btn-primary btn-block btn-lg login-submit-btn"
                 disabled={loading}
               >
-                {loading ? 'Creating Account...' : 'Create Account & Continue to Authenticator →'}
+                {loading ? 'Creating Account...' : 'Create Account & Enter Dashboard →'}
               </button>
             </form>
 
