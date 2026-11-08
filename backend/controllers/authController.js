@@ -71,6 +71,61 @@ const build2FAResponse = async (admin, res) => {
   });
 };
 
+// @desc    Admin Signup / Registration (Step 1 -> Triggers Step 2 Google Authenticator)
+// @route   POST /api/auth/register or /api/auth/signup
+// @access  Public
+exports.register = async (req, res, next) => {
+  try {
+    const { name, email, password, role } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide full name, email, and password.',
+      });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 6 characters long.',
+      });
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+
+    // Check if account already exists
+    const existing = await Admin.findOne({ email: cleanEmail });
+    if (existing) {
+      return res.status(400).json({
+        success: false,
+        message: 'An account with this email address already exists. Please log in instead.',
+      });
+    }
+
+    // Generate Google Authenticator TOTP secret
+    const secret = totp.generateSecret();
+
+    // Create new Admin record
+    const admin = await Admin.create({
+      name: name.trim(),
+      email: cleanEmail,
+      password,
+      role: role && ['admin', 'manager', 'staff'].includes(role) ? role : 'admin',
+      twoFactorSecret: secret,
+      isTwoFactorEnabled: false,
+      isActive: true,
+    });
+
+    console.log(`[Admin Signup] New admin account registered: ${cleanEmail} (${admin.name})`);
+
+    // Advance directly to Step 2: Google Authenticator QR Code Setup
+    return build2FAResponse(admin, res);
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Admin login (Step 1 Password -> Triggers Step 2 Google Authenticator)
 // @route   POST /api/auth/login
 // @access  Public

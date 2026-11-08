@@ -437,6 +437,22 @@ const AdminLogin = () => {
               <code>Email: yaseen@newmbshoes.com</code>
               <code>Password: adminpassword123</code>
             </div>
+
+            {/* Create Account Link */}
+            <div style={{ textAlign: 'center', marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid #f1f5f9' }}>
+              <span style={{ fontSize: '0.9rem', color: '#64748b' }}>Need an admin or showroom staff account? </span>
+              <Link
+                to="/admin/signup"
+                style={{
+                  color: '#0f172a',
+                  fontWeight: 700,
+                  fontSize: '0.9rem',
+                  textDecoration: 'none',
+                }}
+              >
+                Sign Up / Register Here →
+              </Link>
+            </div>
           </>
         )}
 

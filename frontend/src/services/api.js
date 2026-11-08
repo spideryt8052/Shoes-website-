@@ -29,8 +29,12 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      // If we are on an admin route and unauthorized, clear token
-      if (window.location.pathname.startsWith('/admin') && window.location.pathname !== '/admin/login') {
+      // If we are on an admin route (and not on login/signup pages) and unauthorized, clear token
+      if (
+        window.location.pathname.startsWith('/admin') &&
+        window.location.pathname !== '/admin/login' &&
+        window.location.pathname !== '/admin/signup'
+      ) {
         localStorage.removeItem('step_house_token');
         localStorage.removeItem('step_house_admin');
         window.location.href = '/admin/login?expired=true';

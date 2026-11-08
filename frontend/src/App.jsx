@@ -16,6 +16,7 @@ import Contact from './pages/Contact/Contact';
 
 // Admin Pages
 import AdminLogin from './pages/Admin/AdminLogin';
+import AdminSignup from './pages/Admin/AdminSignup';
 import AdminLayout from './pages/Admin/AdminLayout';
 import Dashboard from './pages/Admin/Dashboard';
 import QuickSell from './pages/Admin/QuickSell';
@@ -46,8 +47,10 @@ function App() {
               <Route path="contact" element={<Contact />} />
             </Route>
 
-            {/* Admin Login Route */}
+            {/* Admin Authentication Routes */}
             <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/admin/signup" element={<AdminSignup />} />
+            <Route path="/admin/register" element={<Navigate to="/admin/signup" replace />} />
 
             {/* Protected Admin Management Portal */}
             <Route
