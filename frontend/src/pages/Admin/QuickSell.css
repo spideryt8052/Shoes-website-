@@ -553,4 +553,140 @@
   }
 }
 
+/* ============================================================== */
+/* SHOWROOM DUKAN BRANCH SELECTOR (SET & DONE)                     */
+/* ============================================================== */
+.pos-branch-panel {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+}
+
+.pos-branch-panel.locked {
+  background: linear-gradient(135deg, #f8fafc 0%, #f0fdf4 100%);
+  border-color: #86efac;
+}
+
+.pos-branch-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.pos-branch-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pos-branch-icon {
+  font-size: 1.5rem;
+}
+
+.pos-branch-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.pos-branch-subtitle {
+  font-size: 0.82rem;
+  color: #64748b;
+  margin: 2px 0 0 0;
+}
+
+.branch-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 14px 0;
+}
+
+@media (max-width: 960px) {
+  .branch-cards-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.branch-choice-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  padding: 14px;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  background: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.branch-choice-card:hover {
+  border-color: #3b82f6;
+  background: #f8fafc;
+}
+
+.branch-choice-card.selected {
+  border-color: #10b981;
+  background: #f0fdf4;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+
+.branch-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: #e2e8f0;
+  color: #334155;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.branch-choice-card.selected .branch-badge {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.branch-card-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.branch-card-addr {
+  font-size: 0.78rem;
+  color: #64748b;
+  line-height: 1.35;
+  margin-bottom: 6px;
+}
+
+.branch-card-phone {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #2563eb;
+}
+
+.branch-confirm-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e2e8f0;
+}
+
+
 

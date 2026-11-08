@@ -75,6 +75,19 @@ const saleSchema = new mongoose.Schema(
       default: '',
       trim: true,
     },
+    storeBranch: {
+      type: String,
+      default: 'NEW MB SHOES (Shah Market Main Flagship)',
+      index: true,
+    },
+    storeAddress: {
+      type: String,
+      default: 'D.N. Singh Road, Shah Market (Near Titan World), Khalifabagh Chowk, Tatarpur, Bhagalpur',
+    },
+    storePhone: {
+      type: String,
+      default: '+91 94312 14500',
+    },
     adminUser: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Admin',

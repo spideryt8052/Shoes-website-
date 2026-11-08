@@ -23,11 +23,42 @@ import api from '../../services/api';
 import { useStore } from '../../context/StoreContext';
 import './QuickSell.css';
 
+// Showroom Branches Directory across Bhagalpur
+export const SHOWROOM_BRANCHES = [
+  {
+    id: 'shah-market',
+    name: 'NEW MB SHOES (Shah Market Main Flagship)',
+    shortName: 'Shah Market (Main Flagship)',
+    address: 'D.N. Singh Road, Shah Market (Near Titan World), Khalifabagh Chowk, Bhagalpur',
+    phone: '+91 94312 14500',
+    tagline: 'Main Flagship Footwear Showroom • Khalifabagh',
+    badge: 'Flagship Showroom',
+  },
+  {
+    id: 'tatarpur',
+    name: 'MB SHOES (Tatarpur Showroom)',
+    shortName: 'Tatarpur Showroom',
+    address: 'Tatarpur Main Market Road, Near Chowk, Bhagalpur',
+    phone: '+91 94312 14501',
+    tagline: 'Casual, Sports & Formal Footwear Hub',
+    badge: 'Branch 2',
+  },
+  {
+    id: 'tilkamanjhi',
+    name: 'MB SHOES (Tilkamanjhi 3rd Showroom)',
+    shortName: 'Tilkamanjhi 3rd Showroom',
+    address: 'Tilkamanjhi Main Road / Chowk, Bhagalpur',
+    phone: '+91 94312 14502',
+    tagline: 'Premium Family Footwear Destination',
+    badge: 'Branch 3',
+  },
+];
+
 // Helper function to format AI Digital WhatsApp Bill
-export const formatAiWhatsAppBill = (sale, storeSettings) => {
-  const storeName = storeSettings?.shopName || 'NEW MB SHOES';
-  const storeAddress = storeSettings?.address || 'D.N. Singh Road, Shah Market (Near Titan World), Bhagalpur';
-  const contactNo = storeSettings?.contactNumber || '+91 94312 14500';
+export const formatAiWhatsAppBill = (sale, storeSettings, activeBranch) => {
+  const storeName = sale.storeBranch || activeBranch?.name || storeSettings?.shopName || 'NEW MB SHOES';
+  const storeAddress = sale.storeAddress || activeBranch?.address || storeSettings?.address || 'D.N. Singh Road, Shah Market (Near Titan World), Bhagalpur';
+  const contactNo = sale.storePhone || activeBranch?.phone || storeSettings?.contactNumber || '+91 94312 14500';
   const reviewUrl = storeSettings?.googleReviewUrl || 'https://maps.app.goo.gl/vF32PqqHXmZ6mKTx6';
 
   const saleDate = new Date(sale.saleDate || Date.now());
@@ -79,6 +110,29 @@ const QuickSell = () => {
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  // Showroom Branch Selection State (Persisted in localStorage)
+  const [selectedBranchId, setSelectedBranchId] = useState(
+    () => localStorage.getItem('mb_pos_selected_branch_id') || 'shah-market'
+  );
+  const [isBranchLocked, setIsBranchLocked] = useState(
+    () => localStorage.getItem('mb_pos_branch_locked') === 'true'
+  );
+
+  const activeBranch = SHOWROOM_BRANCHES.find((b) => b.id === selectedBranchId) || SHOWROOM_BRANCHES[0];
+
+  const handleLockBranch = (branchId) => {
+    const bId = branchId || selectedBranchId;
+    setSelectedBranchId(bId);
+    setIsBranchLocked(true);
+    localStorage.setItem('mb_pos_selected_branch_id', bId);
+    localStorage.setItem('mb_pos_branch_locked', 'true');
+  };
+
+  const handleUnlockBranch = () => {
+    setIsBranchLocked(false);
+    localStorage.setItem('mb_pos_branch_locked', 'false');
+  };
 
   // Selected item state
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -196,7 +250,7 @@ const QuickSell = () => {
     const rawPhone = sale.customerPhone || customerPhone;
     const cleanPhone = rawPhone ? rawPhone.replace(/\D/g, '') : '';
     const targetPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
-    const billText = formatAiWhatsAppBill(sale, storeSettings);
+    const billText = formatAiWhatsAppBill(sale, storeSettings, activeBranch);
     const url = `https://api.whatsapp.com/send?phone=${targetPhone}&text=${encodeURIComponent(billText)}`;
     window.open(url, '_blank');
   };
@@ -224,7 +278,7 @@ const QuickSell = () => {
 
   // Copy Bill to Clipboard
   const copyBillText = (sale) => {
-    const text = formatAiWhatsAppBill(sale, storeSettings);
+    const text = formatAiWhatsAppBill(sale, storeSettings, activeBranch);
     navigator.clipboard.writeText(text);
     setCopiedBill(true);
     setTimeout(() => setCopiedBill(false), 2000);
@@ -265,6 +319,9 @@ const QuickSell = () => {
         customerName: customerName.trim() || 'Walk-in Customer',
         customerPhone: customerPhone.trim(),
         remarks: remarks.trim(),
+        storeBranch: activeBranch.name,
+        storeAddress: activeBranch.address,
+        storePhone: activeBranch.phone,
       };
 
       const res = await api.post('/sales', payload);
@@ -342,6 +399,103 @@ const QuickSell = () => {
             <FiFileText /> View Sales Ledger & Google Sheets
           </Link>
         </div>
+      </div>
+
+      {/* ============================================================== */}
+      {/* SHOWROOM DUKAN BRANCH SELECTOR (SET ONCE & DONE)                */}
+      {/* ============================================================== */}
+      <div className={`pos-branch-panel ${isBranchLocked ? 'locked' : ''}`}>
+        <div className="pos-branch-header">
+          <div className="pos-branch-title-group">
+            <span className="pos-branch-icon">{isBranchLocked ? '🏪' : '🏬'}</span>
+            <div>
+              <h4 className="pos-branch-title">
+                {isBranchLocked ? (
+                  <span style={{ color: '#047857' }}>
+                    🟢 Active Billing Showroom: {activeBranch.shortName}
+                  </span>
+                ) : (
+                  '🏬 Dukan Select Karein (Select Billing Showroom)'
+                )}
+              </h4>
+              <p className="pos-branch-subtitle">
+                {isBranchLocked ? (
+                  <span>
+                    📍 <strong>{activeBranch.address}</strong> | 📞 Helpline: <strong>{activeBranch.phone}</strong>
+                  </span>
+                ) : (
+                  'Select which showroom counter this POS terminal is billing from. All Invoices, WhatsApp bills, and Thermal Slips will automatically print this showroom\'s details.'
+                )}
+              </p>
+            </div>
+          </div>
+
+          <div>
+            {isBranchLocked ? (
+              <button
+                type="button"
+                className="btn btn-sm btn-outline"
+                onClick={handleUnlockBranch}
+                title="Click to switch billing showroom counter"
+                style={{ fontSize: '0.82rem', padding: '6px 12px' }}
+              >
+                🔄 Dukan Badlein / Change Shop
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-sm btn-primary"
+                onClick={() => handleLockBranch(selectedBranchId)}
+                style={{ background: '#059669', borderColor: '#059669', fontWeight: 700 }}
+              >
+                ✅ Set Kar Ke Done Karein
+              </button>
+            )}
+          </div>
+        </div>
+
+        {!isBranchLocked && (
+          <>
+            <div className="branch-cards-grid">
+              {SHOWROOM_BRANCHES.map((branch) => {
+                const isSelected = selectedBranchId === branch.id;
+                return (
+                  <button
+                    key={branch.id}
+                    type="button"
+                    className={`branch-choice-card ${isSelected ? 'selected' : ''}`}
+                    onClick={() => setSelectedBranchId(branch.id)}
+                  >
+                    <div className="branch-badge">{branch.badge}</div>
+                    <div className="branch-card-name">{branch.name}</div>
+                    <div className="branch-card-addr">📍 {branch.address}</div>
+                    <div className="branch-card-phone">📞 Helpline: {branch.phone}</div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="branch-confirm-row">
+              <span style={{ fontSize: '0.84rem', color: '#475569' }}>
+                Selected Shop: <strong style={{ color: '#0f172a' }}>{activeBranch.name}</strong>
+              </span>
+              <button
+                type="button"
+                className="btn btn-sm btn-primary"
+                onClick={() => handleLockBranch(selectedBranchId)}
+                style={{
+                  background: '#059669',
+                  borderColor: '#059669',
+                  padding: '9px 20px',
+                  fontWeight: 700,
+                  fontSize: '0.9rem',
+                }}
+              >
+                ✅ Set Dukan & Done (Isi Dukan Se Bill Banayein)
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Sale Success Notification with 1-Click Actions */}
@@ -880,13 +1034,15 @@ const QuickSell = () => {
       {/* ============================================================== */}
       {receiptData && (
         <div id="thermal-print-slip" className="thermal-print-area">
-          <div className="receipt-store-title">{storeSettings.shopName || 'NEW MB SHOES'}</div>
+          <div className="receipt-store-title">
+            {receiptData.storeBranch || activeBranch.name || storeSettings.shopName || 'NEW MB SHOES'}
+          </div>
           <div className="receipt-store-sub">
-            {storeSettings.tagline || 'Multi-Brand Footwear Showroom | Bhagalpur'}
+            {activeBranch.tagline || storeSettings.tagline || 'Multi-Brand Footwear Showroom | Bhagalpur'}
             <br />
-            {storeSettings.address}, {storeSettings.city}
+            {receiptData.storeAddress || activeBranch.address || storeSettings.address}
             <br />
-            Ph: {storeSettings.contactNumber || '+91 94312 14500'}
+            Ph: {receiptData.storePhone || activeBranch.phone || storeSettings.contactNumber || '+91 94312 14500'}
           </div>
 
           <div className="receipt-divider"></div>
@@ -947,7 +1103,7 @@ const QuickSell = () => {
           <div className="receipt-divider"></div>
 
           <div className="receipt-footer-msg">
-            *** THANK YOU FOR VISITING {storeSettings.shopName || 'NEW MB SHOES'}! ***
+            *** THANK YOU FOR VISITING {receiptData.storeBranch || activeBranch.shortName || storeSettings.shopName || 'NEW MB SHOES'}! ***
             <br />
             7-Day Size Exchange at all 3 Bhagalpur Branches.
             <br />
@@ -982,7 +1138,7 @@ const QuickSell = () => {
 
             {/* Chat Bubble Preview */}
             <div className="whatsapp-chat-bubble">
-              {formatAiWhatsAppBill(whatsAppModalData, storeSettings)}
+              {formatAiWhatsAppBill(whatsAppModalData, storeSettings, activeBranch)}
             </div>
 
             {/* Modal Actions */}

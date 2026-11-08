@@ -214,4 +214,13 @@ productSchema.index({
   subcategory: 'text',
 });
 
+// Compound indexes for ultra-fast catalog and stock queries
+productSchema.index({ totalStock: 1, updatedAt: -1 });
+productSchema.index({ isAvailable: 1, createdAt: -1 });
+productSchema.index({ brandName: 1, isAvailable: 1 });
+productSchema.index({ categoryName: 1, isAvailable: 1 });
+productSchema.index({ isFeatured: 1, isAvailable: 1 });
+productSchema.index({ isNewArrival: 1, isAvailable: 1 });
+productSchema.index({ 'variants.quantity': 1 });
+
 module.exports = mongoose.model('Product', productSchema);

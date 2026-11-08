@@ -5,6 +5,7 @@ const StockHistory = require('../models/StockHistory');
 const StoreSettings = require('../models/StoreSettings');
 const { pushToGoogleSheet, GOOGLE_APPS_SCRIPT_TEMPLATE } = require('../services/googleSheetsService');
 const { generateInvoicePDF } = require('../utils/pdfGenerator');
+const cache = require('../utils/cache');
 
 // Helper to generate Invoice Number (Prefixed with MB for NEW MB SHOES)
 const generateInvoiceNumber = () => {
@@ -28,6 +29,9 @@ exports.recordSale = async (req, res, next) => {
       customerName = 'Walk-in Customer',
       customerPhone = '',
       remarks = '',
+      storeBranch,
+      storeAddress,
+      storePhone,
     } = req.body;
 
     if (!productId || !variantId) {
@@ -96,6 +100,9 @@ exports.recordSale = async (req, res, next) => {
       paymentMethod,
       customerName: customerName.trim() || 'Walk-in Customer',
       customerPhone: customerPhone.trim(),
+      storeBranch: storeBranch || 'NEW MB SHOES (Shah Market Main Flagship)',
+      storeAddress: storeAddress || 'D.N. Singh Road, Shah Market (Near Titan World), Bhagalpur',
+      storePhone: storePhone || '+91 94312 14500',
       adminUser: req.admin ? req.admin._id : null,
       adminName: req.admin ? req.admin.name : 'Store Staff',
       remarks: remarks.trim(),
@@ -109,6 +116,9 @@ exports.recordSale = async (req, res, next) => {
         console.error('Auto Google Sheet sync error:', err.message)
       );
     }
+
+    cache.clearTag('products:');
+    cache.clearTag('inventory:');
 
     res.status(201).json({
       success: true,
@@ -201,6 +211,9 @@ exports.recordBulkSales = async (req, res, next) => {
         console.error('Bulk Google Sheet sync error:', err.message)
       );
     }
+
+    cache.clearTag('products:');
+    cache.clearTag('inventory:');
 
     res.status(201).json({
       success: true,

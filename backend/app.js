@@ -19,6 +19,7 @@ const stockHistoryRoutes = require('./routes/stockHistoryRoutes');
 const saleRoutes = require('./routes/saleRoutes');
 
 const mongoSanitize = require('./middleware/sanitize');
+const { apiLimiter, burstLimiter } = require('./middleware/rateLimiter');
 
 const app = express();
 
@@ -44,6 +45,10 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 app.use(mongoSanitize);
+
+// DDoS & Spam Throttling on API endpoints
+app.use('/api', burstLimiter);
+app.use('/api', apiLimiter);
 
 // Restrict CORS to authorized showroom & development domains
 const allowedOrigins = [
