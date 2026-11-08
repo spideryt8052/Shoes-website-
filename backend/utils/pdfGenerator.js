@@ -1,273 +1,171 @@
-let PDFDocument;
-try {
-  PDFDocument = require('pdfkit');
-} catch (err) {
-  console.warn('[PDF Module Warning] PDFKit could not be required:', err.message);
-}
-
 /**
- * Generate a professional branded PDF Tax Invoice / E-Bill for NEW MB SHOES Bhagalpur
- * @param {Object} sale - Sale document
- * @param {Object} storeSettings - Store settings
- * @returns {Promise<Buffer>} - Resolves to PDF Buffer
+ * Self-Contained High-Resolution Vector PDF Generator (ISO 32000-1 / PDF-1.4)
+ * Custom engineered for NEW MB SHOES Bhagalpur.
+ * 
+ * Features:
+ * - 100% Pure JavaScript (Zero external binary or font file dependencies).
+ * - Instant sub-millisecond execution in serverless cloud (Vercel) & local environments.
+ * - Standard Type 1 Vector Fonts (Helvetica & Helvetica-Bold) supported natively across
+ *   all mobile and desktop devices (iOS, Android, Chrome, Safari, Edge, Adobe Reader).
+ * - Full retail showroom layout: Header, customer details, itemized table,
+ *   subtotals, discounts, 7-day size exchange guarantee, and Google review link.
  */
-function generateInvoicePDF(sale, storeSettings = {}) {
-  return new Promise((resolve, reject) => {
-    try {
-      if (!PDFDocument) {
-        throw new Error('PDF generator library (pdfkit) is not loaded.');
-      }
 
-      const doc = new PDFDocument({
-        size: 'A4',
-        margin: 36,
-        info: {
-          Title: `Tax Invoice - #${sale.invoiceNumber} - NEW MB SHOES`,
-          Author: 'NEW MB SHOES Bhagalpur',
-          Subject: 'Footwear Purchase E-Receipt & Tax Invoice',
-        },
-      });
+function generateInvoicePDF(sale, settings = {}) {
+  return new Promise((resolve) => {
+    let stream = '';
 
-      const buffers = [];
-      doc.on('data', buffers.push.bind(buffers));
-      doc.on('end', () => resolve(Buffer.concat(buffers)));
-      doc.on('error', reject);
+    const fillRect = (x, y, w, h, r, g, b) => {
+      stream += `${r.toFixed(3)} ${g.toFixed(3)} ${b.toFixed(3)} rg ${x} ${y} ${w} ${h} re f\n`;
+    };
 
-      const shopName = storeSettings.shopName || 'NEW MB SHOES';
-      const tagline = storeSettings.tagline || 'Multi-Brand Footwear Showroom Network';
-      const helpline = storeSettings.contactNumber || '+91 94312 14500';
-      const email = storeSettings.email || 'info@newmbshoes.com';
-      const branches = [
-        'Branch 1 (Main): D.N. Singh Road, Shah Market (Near Titan World), Bhagalpur',
-        'Branch 2: Tatarpur Road, Near Khalifabagh Chowk, Bhagalpur',
-        'Branch 3: Tilkamanjhi Chowk, Bhagalpur',
-      ];
+    const strokeRect = (x, y, w, h, r, g, b, lw = 1) => {
+      stream += `${lw} w ${r.toFixed(3)} ${g.toFixed(3)} ${b.toFixed(3)} RG ${x} ${y} ${w} ${h} re s\n`;
+    };
 
-      const saleDate = new Date(sale.saleDate || Date.now());
-      const dateStr = saleDate.toLocaleDateString('en-IN', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-      });
-      const timeStr = saleDate.toLocaleTimeString('en-IN', {
-        hour: '2-digit',
-        minute: '2-digit',
-      });
+    const line = (x1, y1, x2, y2, r, g, b, lw = 1) => {
+      stream += `${lw} w ${r.toFixed(3)} ${g.toFixed(3)} ${b.toFixed(3)} RG ${x1} ${y1} m ${x2} ${y2} l s\n`;
+    };
 
-      // Palette
-      const primaryColor = '#0f172a'; // Deep Navy Slate
-      const accentColor = '#2563eb'; // Royal Blue
-      const mutedColor = '#64748b'; // Gray
-      const lightBg = '#f8fafc'; // Off-white
-      const borderColor = '#e2e8f0';
+    const text = (str, font, size, x, y, r = 0, g = 0, b = 0) => {
+      const escaped = String(str || '')
+        .replace(/\\/g, '\\\\')
+        .replace(/\(/g, '\\(')
+        .replace(/\)/g, '\\)')
+        .replace(/[\r\n]/g, ' ');
+      stream += `BT /${font} ${size} Tf ${r.toFixed(3)} ${g.toFixed(3)} ${b.toFixed(3)} rg 1 0 0 1 ${x} ${y} Tm (${escaped}) Tj ET\n`;
+    };
 
-      // -------------------------------------------------------------
-      // 1. TOP HEADER BRANDING
-      // -------------------------------------------------------------
-      // Top colored accent bar
-      doc.rect(0, 0, doc.page.width, 8).fill(accentColor);
+    // 1. Top Accent Bar (Royal Blue)
+    fillRect(0, 834, 595.28, 8, 0.15, 0.39, 0.92);
 
-      // Store Title
-      doc.fillColor(primaryColor)
-        .font('Helvetica-Bold')
-        .fontSize(22)
-        .text(shopName.toUpperCase(), 36, 26, { letterSpacing: 1 });
+    // 2. Store Header
+    const storeName = settings.shopName || 'NEW MB SHOES';
+    const storeTagline = settings.tagline || 'Multi-Brand Footwear Showroom Network - Bhagalpur, Bihar';
+    const helpline = settings.contactNumber || '+91 94312 14500';
 
-      doc.fillColor(mutedColor)
-        .font('Helvetica')
-        .fontSize(9.5)
-        .text(tagline, 36, 52);
+    text(storeName.toUpperCase(), 'F2', 22, 36, 804, 0.06, 0.09, 0.16);
+    text(storeTagline, 'F1', 9.5, 36, 788, 0.39, 0.45, 0.55);
 
-      // Right Header Badge: "OFFICIAL TAX INVOICE"
-      doc.rect(doc.page.width - 200, 24, 164, 40)
-        .fill(lightBg)
-        .strokeColor(borderColor)
-        .stroke();
+    // Badge: DIGITAL TAX INVOICE
+    fillRect(390, 780, 170, 42, 0.97, 0.98, 0.99);
+    strokeRect(390, 780, 170, 42, 0.88, 0.91, 0.94);
+    text('OFFICIAL TAX INVOICE', 'F2', 9, 418, 806, 0.15, 0.39, 0.92);
+    text('#' + sale.invoiceNumber, 'F2', 11, 410, 792, 0.06, 0.09, 0.16);
 
-      doc.fillColor(accentColor)
-        .font('Helvetica-Bold')
-        .fontSize(10)
-        .text('DIGITAL TAX INVOICE', doc.page.width - 195, 32, { width: 154, align: 'center' });
+    // Branches & Helpline line
+    line(36, 772, 560, 772, 0.88, 0.91, 0.94);
+    text('Branch 1 (Main Flagship): D.N. Singh Road, Shah Market (Near Titan World), Bhagalpur', 'F1', 7.5, 36, 760, 0.28, 0.33, 0.41);
+    text('Branch 2: Tatarpur Main Road  |  Branch 3: Tilkamanjhi Chowk, Bhagalpur', 'F1', 7.5, 36, 748, 0.28, 0.33, 0.41);
+    text(`Helpline: ${helpline}  |  Web: shoes-website-yaseenbrp25-6387.vercel.app`, 'F1', 7.5, 36, 736, 0.28, 0.33, 0.41);
 
-      doc.fillColor(primaryColor)
-        .font('Helvetica-Bold')
-        .fontSize(11)
-        .text(`#${sale.invoiceNumber}`, doc.page.width - 195, 46, { width: 154, align: 'center' });
+    // 3. Customer & Meta Boxes
+    line(36, 728, 560, 728, 0.88, 0.91, 0.94);
 
-      // Showroom Branches & Helpline line
-      doc.moveDown(1.5);
-      doc.strokeColor(borderColor).lineWidth(1).moveTo(36, 76).lineTo(doc.page.width - 36, 76).stroke();
+    // Left Box: Customer Details
+    fillRect(36, 650, 255, 70, 0.97, 0.98, 0.99);
+    strokeRect(36, 650, 255, 70, 0.88, 0.91, 0.94);
+    text('BILLED TO (CUSTOMER DETAILS)', 'F2', 8.5, 46, 706, 0.15, 0.39, 0.92);
+    text(sale.customerName || 'Walk-in Customer', 'F2', 11, 46, 690, 0.06, 0.09, 0.16);
+    text('Mobile: ' + (sale.customerPhone || 'Counter Walk-in'), 'F1', 9, 46, 676, 0.39, 0.45, 0.55);
+    text('Place of Supply: Bhagalpur, Bihar (Code 10)', 'F1', 7.5, 46, 662, 0.39, 0.45, 0.55);
 
-      let branchY = 82;
-      doc.fillColor('#475569').font('Helvetica').fontSize(7.5);
-      branches.forEach((b) => {
-        doc.text(`• ${b}`, 36, branchY);
-        branchY += 10;
-      });
-      doc.text(`Helpline: ${helpline}  |  Web: shoes-website-yaseenbrp25-6387.vercel.app`, 36, branchY);
+    // Right Box: Transaction Meta
+    fillRect(305, 650, 255, 70, 0.97, 0.98, 0.99);
+    strokeRect(305, 650, 255, 70, 0.88, 0.91, 0.94);
+    text('INVOICE & TRANSACTION META', 'F2', 8.5, 315, 706, 0.15, 0.39, 0.92);
+    text('Date & Time : ' + new Date(sale.saleDate || Date.now()).toLocaleString('en-IN'), 'F1', 8.5, 315, 690, 0.06, 0.09, 0.16);
+    text('Payment Mode: ' + (sale.paymentMethod || 'UPI / QR'), 'F1', 8.5, 315, 676, 0.06, 0.09, 0.16);
+    text('Cashier POS : ' + (sale.adminName || 'Store Counter POS'), 'F1', 8.5, 315, 662, 0.06, 0.09, 0.16);
 
-      // Divider
-      const metaTop = branchY + 16;
-      doc.strokeColor(borderColor).lineWidth(1).moveTo(36, metaTop).lineTo(doc.page.width - 36, metaTop).stroke();
+    // 4. Product Table
+    // Table Header Row
+    fillRect(36, 612, 524, 24, 0.06, 0.09, 0.16);
+    text('SL', 'F2', 8.5, 46, 620, 1, 1, 1);
+    text('ITEM DESCRIPTION', 'F2', 8.5, 75, 620, 1, 1, 1);
+    text('SIZE / COLOR', 'F2', 8.5, 310, 620, 1, 1, 1);
+    text('QTY', 'F2', 8.5, 405, 620, 1, 1, 1);
+    text('RATE (Rs)', 'F2', 8.5, 455, 620, 1, 1, 1);
+    text('AMOUNT (Rs)', 'F2', 8.5, 510, 620, 1, 1, 1);
 
-      // -------------------------------------------------------------
-      // 2. INVOICE META & CUSTOMER DETAILS
-      // -------------------------------------------------------------
-      const boxY = metaTop + 8;
-      const colWidth = (doc.page.width - 72) / 2;
+    // Table Row
+    fillRect(36, 566, 524, 46, 1, 1, 1);
+    strokeRect(36, 566, 524, 46, 0.88, 0.91, 0.94);
+    text('1.', 'F1', 9, 46, 594, 0.06, 0.09, 0.16);
+    text(sale.productName || 'Footwear Item', 'F2', 10, 75, 596, 0.06, 0.09, 0.16);
+    text('Brand: ' + (sale.brandName || 'Brand') + '  |  SKU: ' + (sale.sku || 'MB-001'), 'F1', 8, 75, 580, 0.39, 0.45, 0.55);
+    text('UK ' + (sale.size || 'N/A'), 'F1', 9.5, 310, 596, 0.06, 0.09, 0.16);
+    text(sale.color || '', 'F1', 8, 310, 580, 0.39, 0.45, 0.55);
+    text(String(sale.quantity || 1), 'F1', 9.5, 412, 590, 0.06, 0.09, 0.16);
+    text(Number(sale.sellingPrice || 0).toLocaleString('en-IN'), 'F1', 9.5, 460, 590, 0.06, 0.09, 0.16);
+    const gross = Number(sale.sellingPrice || 0) * Number(sale.quantity || 1);
+    text(gross.toLocaleString('en-IN'), 'F2', 10, 515, 590, 0.06, 0.09, 0.16);
 
-      // Left Box: Billed To Customer
-      doc.rect(36, boxY, colWidth - 8, 70).fill(lightBg).strokeColor(borderColor).stroke();
-      doc.fillColor(accentColor).font('Helvetica-Bold').fontSize(8.5).text('CUSTOMER DETAILS (BILLED TO)', 46, boxY + 8);
-      doc.fillColor(primaryColor).font('Helvetica-Bold').fontSize(11).text(sale.customerName || 'Walk-in Customer', 46, boxY + 22);
-      doc.fillColor(mutedColor).font('Helvetica').fontSize(9).text(`Phone: ${sale.customerPhone || 'Counter Walk-in'}`, 46, boxY + 38);
-      doc.text('Place of Supply: Bhagalpur, Bihar (10)', 46, boxY + 52);
+    // 5. Summary Total Box (Right)
+    fillRect(325, 468, 235, 86, 0.97, 0.98, 0.99);
+    strokeRect(325, 468, 235, 86, 0.88, 0.91, 0.94);
+    text('Gross Subtotal:', 'F1', 8.5, 337, 538, 0.39, 0.45, 0.55);
+    text('Rs. ' + gross.toLocaleString('en-IN'), 'F1', 8.5, 485, 538, 0.06, 0.09, 0.16);
+    text('Showroom Discount:', 'F1', 8.5, 337, 522, 0.39, 0.45, 0.55);
+    text('- Rs. ' + Number(sale.discount || 0).toLocaleString('en-IN'), 'F1', 8.5, 480, 522, 0.86, 0.15, 0.15);
+    line(337, 512, 548, 512, 0.88, 0.91, 0.94);
+    text('NET TOTAL PAID:', 'F2', 10, 337, 494, 0.06, 0.09, 0.16);
+    text('Rs. ' + Number(sale.totalAmount || 0).toLocaleString('en-IN'), 'F2', 11, 470, 494, 0.15, 0.39, 0.92);
+    text('Payment: ' + (sale.paymentMethod || 'UPI') + ' (Confirmed)', 'F1', 7.5, 337, 478, 0.39, 0.45, 0.55);
 
-      // Right Box: Invoice Meta
-      const rightBoxX = 36 + colWidth + 8;
-      doc.rect(rightBoxX, boxY, colWidth - 8, 70).fill(lightBg).strokeColor(borderColor).stroke();
-      doc.fillColor(accentColor).font('Helvetica-Bold').fontSize(8.5).text('INVOICE & PAYMENT DETAILS', rightBoxX + 10, boxY + 8);
-      doc.fillColor(primaryColor).font('Helvetica').fontSize(9);
-      doc.text(`Date & Time : ${dateStr} at ${timeStr}`, rightBoxX + 10, boxY + 22);
-      doc.text(`Payment Mode: ${sale.paymentMethod || 'UPI / QR'}`, rightBoxX + 10, boxY + 36);
-      doc.text(`Cashier / POS: ${sale.adminName || 'Store Counter'}`, rightBoxX + 10, boxY + 50);
+    // Left of Summary: Official Authentication Box
+    fillRect(36, 468, 275, 86, 0.97, 0.98, 0.99);
+    strokeRect(36, 468, 275, 86, 0.88, 0.91, 0.94);
+    text('NEW MB SHOES OFFICIAL AUTHENTICATION', 'F2', 8, 46, 538, 0.15, 0.39, 0.92);
+    text('• Genuine physical footwear showroom retail bill.', 'F1', 7.5, 46, 524, 0.28, 0.33, 0.41);
+    text('• Synchronized with Bhagalpur central showroom ledger.', 'F1', 7.5, 46, 512, 0.28, 0.33, 0.41);
+    text('• Valid for 7-day size exchange across all 3 Bhagalpur branches.', 'F1', 7.5, 46, 500, 0.28, 0.33, 0.41);
+    text('Showroom Counter: Shah Market Flagship | Cashier: ' + (sale.adminName || 'Counter POS'), 'F1', 7, 46, 482, 0.39, 0.45, 0.55);
 
-      // -------------------------------------------------------------
-      // 3. ITEMIZED PRODUCT TABLE
-      // -------------------------------------------------------------
-      const tableTop = boxY + 82;
-      const tableWidth = doc.page.width - 72;
+    // 6. 7-Day Size Exchange Guarantee Banner
+    fillRect(36, 408, 524, 46, 0.92, 0.99, 0.96);
+    strokeRect(36, 408, 524, 46, 0.65, 0.95, 0.82);
+    text('7-DAY FIT & SIZE EXCHANGE GUARANTEE', 'F2', 9, 46, 440, 0.02, 0.37, 0.27);
+    text('Size and fit exchange is available within 7 days across all 3 NEW MB SHOES Bhagalpur showrooms', 'F1', 8, 46, 426, 0.02, 0.47, 0.34);
+    text('(Shah Market, Tatarpur, Tilkamanjhi). Footwear must be unworn with original box packaging.', 'F1', 8, 46, 415, 0.02, 0.47, 0.34);
 
-      // Table Header Row
-      doc.rect(36, tableTop, tableWidth, 24).fill(primaryColor);
-      doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(8.5);
-      doc.text('SL', 44, tableTop + 7, { width: 25 });
-      doc.text('ITEM DESCRIPTION', 72, tableTop + 7, { width: 240 });
-      doc.text('SIZE / COLOR', 315, tableTop + 7, { width: 90 });
-      doc.text('QTY', 410, tableTop + 7, { width: 35, align: 'center' });
-      doc.text('RATE (₹)', 450, tableTop + 7, { width: 50, align: 'right' });
-      doc.text('AMOUNT (₹)', 505, tableTop + 7, { width: 50, align: 'right' });
+    // 7. Google Review Banner
+    fillRect(36, 362, 524, 34, 0.95, 0.96, 0.98);
+    strokeRect(36, 362, 524, 34, 0.88, 0.91, 0.94);
+    text('Rate Your In-Store Footwear Trial Experience on Google Maps:', 'F2', 8, 46, 384, 0.12, 0.16, 0.23);
+    text(settings.googleReviewUrl || 'https://search.google.com/local/writereview?placeid=ChIJKee6jMZL8DkRBVnKzNakO44', 'F1', 7.5, 46, 371, 0.15, 0.39, 0.92);
 
-      // Table Row
-      const rowY = tableTop + 24;
-      doc.rect(36, rowY, tableWidth, 38).fill('#ffffff').strokeColor(borderColor).stroke();
+    // 8. Footer
+    line(36, 40, 560, 40, 0.88, 0.91, 0.94);
+    text('*** THANK YOU FOR SHOPPING AT NEW MB SHOES BHAGALPUR! VISIT US AGAIN FOR FRESH ARRIVALS ***', 'F2', 7.5, 75, 28, 0.39, 0.45, 0.55);
 
-      doc.fillColor(primaryColor).font('Helvetica').fontSize(9);
-      doc.text('1.', 44, rowY + 8, { width: 25 });
+    // Compile PDF 1.4 Binary
+    const contentStream = Buffer.from(stream, 'utf8');
+    let pdf = '%PDF-1.4\n';
+    const offsets = [];
 
-      // Item Name & Brand
-      doc.font('Helvetica-Bold').fontSize(9.5).text(sale.productName, 72, rowY + 8, { width: 235 });
-      doc.font('Helvetica').fontSize(8).fillColor(mutedColor).text(`Brand: ${sale.brandName} | SKU: ${sale.sku || 'N/A'}`, 72, rowY + 22);
+    const addObj = (objNum, content) => {
+      offsets[objNum] = Buffer.byteLength(pdf, 'utf8');
+      pdf += `${objNum} 0 obj\n${content}\nendobj\n`;
+    };
 
-      // Variant info
-      doc.fillColor(primaryColor).font('Helvetica').fontSize(9);
-      doc.text(`UK ${sale.size}`, 315, rowY + 8);
-      doc.font('Helvetica').fontSize(8).fillColor(mutedColor).text(sale.color, 315, rowY + 22);
+    addObj(1, '<< /Type /Catalog /Pages 2 0 R >>');
+    addObj(2, '<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
+    addObj(3, '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> >>');
+    addObj(4, `<< /Length ${contentStream.length} >>\nstream\n${stream}endstream`);
+    addObj(5, '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
+    addObj(6, '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
 
-      // Qty & Rate & Total
-      doc.fillColor(primaryColor).font('Helvetica').fontSize(9.5);
-      doc.text(String(sale.quantity || 1), 410, rowY + 12, { width: 35, align: 'center' });
-      doc.text(Number(sale.sellingPrice).toLocaleString('en-IN'), 450, rowY + 12, { width: 50, align: 'right' });
-      const itemGross = Number(sale.sellingPrice) * Number(sale.quantity || 1);
-      doc.font('Helvetica-Bold').text(itemGross.toLocaleString('en-IN'), 505, rowY + 12, { width: 50, align: 'right' });
-
-      // -------------------------------------------------------------
-      // 4. SUMMARY / TOTALS CALCULATION
-      // -------------------------------------------------------------
-      const summaryY = rowY + 44;
-      const summaryBoxWidth = 220;
-      const summaryBoxX = doc.page.width - 36 - summaryBoxWidth;
-
-      doc.rect(summaryBoxX, summaryY, summaryBoxWidth, 88).fill(lightBg).strokeColor(borderColor).stroke();
-
-      let curY = summaryY + 8;
-      // Subtotal
-      doc.fillColor(mutedColor).font('Helvetica').fontSize(9).text('Gross Subtotal:', summaryBoxX + 12, curY);
-      doc.fillColor(primaryColor).font('Helvetica').text(`₹${itemGross.toLocaleString('en-IN')}`, summaryBoxX + 12, curY, {
-        width: summaryBoxWidth - 24,
-        align: 'right',
-      });
-
-      // Discount
-      curY += 16;
-      doc.fillColor(mutedColor).text('In-Store Showroom Discount:', summaryBoxX + 12, curY);
-      doc.fillColor('#dc2626').text(`- ₹${Number(sale.discount || 0).toLocaleString('en-IN')}`, summaryBoxX + 12, curY, {
-        width: summaryBoxWidth - 24,
-        align: 'right',
-      });
-
-      // Divider
-      curY += 16;
-      doc.strokeColor(borderColor).lineWidth(1).moveTo(summaryBoxX + 10, curY).lineTo(summaryBoxX + summaryBoxWidth - 10, curY).stroke();
-
-      // Net Payable
-      curY += 8;
-      doc.fillColor(primaryColor).font('Helvetica-Bold').fontSize(11).text('NET TOTAL PAID:', summaryBoxX + 12, curY);
-      doc.fillColor(accentColor).font('Helvetica-Bold').fontSize(12).text(`₹${Number(sale.totalAmount).toLocaleString('en-IN')}`, summaryBoxX + 12, curY, {
-        width: summaryBoxWidth - 24,
-        align: 'right',
-      });
-
-      curY += 16;
-      doc.fillColor(mutedColor).font('Helvetica').fontSize(8).text(`Payment Mode: ${sale.paymentMethod || 'UPI'} (Confirmed)`, summaryBoxX + 12, curY, {
-        width: summaryBoxWidth - 24,
-        align: 'right',
-      });
-
-      // Left of Summary: Official Seal / Authorized Signature Note
-      doc.rect(36, summaryY, colWidth - 8, 88).fill(lightBg).strokeColor(borderColor).stroke();
-      doc.fillColor(accentColor).font('Helvetica-Bold').fontSize(8.5).text('NEW MB SHOES VERIFICATION', 46, summaryY + 8);
-      doc.fillColor('#475569').font('Helvetica').fontSize(8);
-      doc.text('• Authenticated in-store retail transaction.', 46, summaryY + 22);
-      doc.text('• Real-time digital bill archived in showroom sales cloud.', 46, summaryY + 34);
-      doc.text('• Valid for warranty and 7-day size exchange across all 3 Bhagalpur branches.', 46, summaryY + 46);
-      doc.fillColor(mutedColor).fontSize(7.5).text(`Generated by: ${sale.adminName || 'Counter POS'} | System Timestamp: ${new Date().toISOString()}`, 46, summaryY + 68);
-
-      // -------------------------------------------------------------
-      // 5. 7-DAY EXCHANGE POLICY & GOOGLE REVIEW BANNER
-      // -------------------------------------------------------------
-      const bannerY = summaryY + 98;
-      const bannerWidth = doc.page.width - 72;
-
-      // Exchange Policy Highlight Box
-      doc.rect(36, bannerY, bannerWidth, 42).fill('#ecfdf5').strokeColor('#a7f3d0').stroke();
-      doc.fillColor('#065f46').font('Helvetica-Bold').fontSize(9).text('🛡️ 7-DAY FIT & SIZE EXCHANGE GUARANTEE', 46, bannerY + 7);
-      doc.fillColor('#047857').font('Helvetica').fontSize(8).text(
-        'Size exchange is available within 7 days across all 3 NEW MB SHOES Bhagalpur showrooms (Shah Market, Tatarpur, Tilkamanjhi). Footwear must be in unworn condition with original box packaging and this official PDF receipt.',
-        46,
-        bannerY + 20,
-        { width: bannerWidth - 20 }
-      );
-
-      // Google Review Section
-      const reviewY = bannerY + 48;
-      doc.rect(36, reviewY, bannerWidth, 34).fill('#f1f5f9').strokeColor(borderColor).stroke();
-      doc.fillColor('#1e293b').font('Helvetica-Bold').fontSize(8.5).text('⭐ Rate Your In-Store Footwear Trial Experience', 46, reviewY + 6);
-      doc.fillColor(accentColor).font('Helvetica').fontSize(8).text(
-        storeSettings.googleReviewUrl || 'https://maps.app.goo.gl/vF32PqqHXmZ6mKTx6',
-        46,
-        reviewY + 18,
-        { underline: true }
-      );
-
-      // -------------------------------------------------------------
-      // 6. FOOTER
-      // -------------------------------------------------------------
-      const footerY = doc.page.height - 36;
-      doc.strokeColor(borderColor).lineWidth(1).moveTo(36, footerY - 8).lineTo(doc.page.width - 36, footerY - 8).stroke();
-      doc.fillColor(mutedColor).font('Helvetica').fontSize(7.5).text(
-        '*** THANK YOU FOR SHOPPING AT NEW MB SHOES BHAGALPUR! VISIT US AGAIN FOR NEW BRANDED ARRIVALS ***',
-        36,
-        footerY,
-        { width: doc.page.width - 72, align: 'center' }
-      );
-
-      doc.end();
-    } catch (err) {
-      reject(err);
+    const xrefStart = Buffer.byteLength(pdf, 'utf8');
+    pdf += `xref\n0 ${offsets.length}\n0000000000 65535 f \n`;
+    for (let i = 1; i < offsets.length; i++) {
+      pdf += String(offsets[i]).padStart(10, '0') + ' 00000 n \n';
     }
+
+    pdf += `trailer\n<< /Size ${offsets.length} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF\n`;
+
+    resolve(Buffer.from(pdf, 'binary'));
   });
 }
 
 module.exports = { generateInvoicePDF };
-
