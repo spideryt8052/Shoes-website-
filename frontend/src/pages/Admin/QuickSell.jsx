@@ -8,16 +8,66 @@ import {
   FiShoppingBag,
   FiArrowRight,
   FiClock,
-  FiDollarSign,
   FiUser,
   FiPhone,
   FiFileText,
   FiPrinter,
   FiX,
+  FiShare2,
+  FiCopy,
+  FiCheck,
+  FiMessageCircle,
 } from 'react-icons/fi';
 import api from '../../services/api';
 import { useStore } from '../../context/StoreContext';
 import './QuickSell.css';
+
+// Helper function to format AI Digital WhatsApp Bill
+export const formatAiWhatsAppBill = (sale, storeSettings) => {
+  const storeName = storeSettings?.shopName || 'NEW MB SHOES';
+  const storeAddress = storeSettings?.address || 'D.N. Singh Road, Shah Market (Near Titan World), Bhagalpur';
+  const contactNo = storeSettings?.contactNumber || '+91 94312 14500';
+  const reviewUrl = storeSettings?.googleReviewUrl || 'https://maps.app.goo.gl/vF32PqqHXmZ6mKTx6';
+
+  const saleDate = new Date(sale.saleDate || Date.now());
+  const dateStr = saleDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  const timeStr = saleDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+
+  const greeting = sale.customerName && sale.customerName !== 'Walk-in Customer'
+    ? `Dear *${sale.customerName}*,`
+    : 'Dear Valued Customer,';
+
+  return `🏪 *${storeName.toUpperCase()}*
+📍 _${storeAddress}_
+📞 Showroom Helpline: ${contactNo}
+───────────────────────
+🧾 *OFFICIAL DIGITAL INVOICE & RECEIPT*
+Invoice No: *#${sale.invoiceNumber}*
+Date: ${dateStr} | Time: ${timeStr}
+Cashier: ${sale.adminName || 'Counter POS'}
+───────────────────────
+${greeting}
+Thank you for visiting *NEW MB SHOES Bhagalpur*! Here is your verified digital bill:
+
+👟 *PURCHASED ITEM*:
+• *${sale.productName}*
+  Brand: *${sale.brandName}*
+  Size: *UK ${sale.size}* | Color: *${sale.color}*
+  Quantity: *${sale.quantity} Pair(s)*
+  Rate: ₹${Number(sale.sellingPrice).toLocaleString('en-IN')}
+${sale.discount > 0 ? `  Showroom Discount: -₹${Number(sale.discount).toLocaleString('en-IN')}\n` : ''}
+💰 *TOTAL AMOUNT PAID: ₹${Number(sale.totalAmount).toLocaleString('en-IN')}*
+💳 Payment Method: *${sale.paymentMethod}*
+───────────────────────
+🛡️ *7-DAY SIZE EXCHANGE POLICY*:
+• Fit/size exchange is available within 7 days across our 3 Bhagalpur branches (Shah Market, Tatarpur, Tilkamanjhi) with this WhatsApp bill.
+• Shoes must be unworn and in original box packaging.
+
+⭐ *Rate your in-store trial experience*:
+${reviewUrl}
+
+✨ *Visit NEW MB SHOES again for fresh branded footwear arrivals!* ✨`;
+};
 
 const QuickSell = () => {
   const { storeSettings } = useStore();
@@ -37,9 +87,22 @@ const QuickSell = () => {
   const [customerPhone, setCustomerPhone] = useState('');
   const [remarks, setRemarks] = useState('');
 
-  // Receipt modal state
+  // POS Automation Toggles (Persisted in localStorage)
+  const [autoPrintThermal, setAutoPrintThermal] = useState(
+    () => localStorage.getItem('mb_auto_print') === 'true'
+  );
+  const [autoWhatsApp, setAutoWhatsApp] = useState(
+    () => localStorage.getItem('mb_auto_whatsapp') !== 'false'
+  );
+
+  // Receipt Modal State
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [receiptData, setReceiptData] = useState(null);
+
+  // WhatsApp Modal State
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
+  const [whatsAppModalData, setWhatsAppModalData] = useState(null);
+  const [copiedBill, setCopiedBill] = useState(false);
 
   // Submit and feedback states
   const [submitting, setSubmitting] = useState(false);
@@ -124,6 +187,40 @@ const QuickSell = () => {
   const parsedDiscount = Math.max(0, Number(discount) || 0);
   const totalAmount = Math.max(0, unitPrice * parsedQty - parsedDiscount);
 
+  // 1-Click Send WhatsApp Digital Bill
+  const sendWhatsAppBill = (sale) => {
+    const rawPhone = sale.customerPhone || customerPhone;
+    const cleanPhone = rawPhone ? rawPhone.replace(/\D/g, '') : '';
+    const targetPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+    const billText = formatAiWhatsAppBill(sale, storeSettings);
+    const url = `https://api.whatsapp.com/send?phone=${targetPhone}&text=${encodeURIComponent(billText)}`;
+    window.open(url, '_blank');
+  };
+
+  // 1-Click Print Thermal Receipt Slip
+  const handlePrintDirect = (sale) => {
+    setReceiptData(sale);
+    setTimeout(() => {
+      window.print();
+    }, 150);
+  };
+
+  // Open WhatsApp Preview Modal
+  const openWhatsAppModal = (sale) => {
+    setWhatsAppModalData(sale);
+    setCopiedBill(false);
+    setShowWhatsAppModal(true);
+  };
+
+  // Copy Bill to Clipboard
+  const copyBillText = (sale) => {
+    const text = formatAiWhatsAppBill(sale, storeSettings);
+    navigator.clipboard.writeText(text);
+    setCopiedBill(true);
+    setTimeout(() => setCopiedBill(false), 2000);
+  };
+
+  // Submit In-Store Quick Sale
   const handleSubmitSale = async (e) => {
     e.preventDefault();
     setErrorMessage('');
@@ -162,7 +259,9 @@ const QuickSell = () => {
 
       const res = await api.post('/sales', payload);
       if (res.data.success) {
+        const createdSale = res.data.sale;
         setSaleResult(res.data);
+        setReceiptData(createdSale);
 
         // Update local variant stock immediately
         const newRem = res.data.remainingVariantStock;
@@ -189,7 +288,21 @@ const QuickSell = () => {
         // Refresh recent sales
         fetchRecentSales();
 
-        // Reset inputs
+        // AUTOMATION 1: 1-Click Auto-Print Thermal Receipt (If toggle enabled)
+        if (autoPrintThermal) {
+          setTimeout(() => {
+            window.print();
+          }, 300);
+        }
+
+        // AUTOMATION 2: 1-Click Auto-Send WhatsApp Digital Bill (If toggle enabled and phone entered)
+        if (autoWhatsApp && createdSale.customerPhone) {
+          setTimeout(() => {
+            sendWhatsAppBill(createdSale);
+          }, 600);
+        }
+
+        // Reset customer inputs for next customer
         setQuantity(1);
         setDiscount(0);
         setCustomerName('');
@@ -210,8 +323,8 @@ const QuickSell = () => {
         <div>
           <h2>⚡ Real-Time In-Store Quick Sell (Counter POS)</h2>
           <p className="admin-page-subtitle">
-            Instantly record shoe sales at the cash counter. In-store inventory reduces in real-time,
-            and the live website updates out-of-stock sizes instantly.
+            Instantly record shoe sales, automatically dispatch digital WhatsApp bills to customer phones,
+            and 1-click auto-print 58mm/80mm thermal receipts.
           </p>
         </div>
         <div className="header-actions">
@@ -221,35 +334,73 @@ const QuickSell = () => {
         </div>
       </div>
 
-      {/* Success Notification */}
+      {/* Sale Success Notification with 1-Click Actions */}
       {saleResult && (
-        <div className="alert alert-success" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <FiCheckCircle size={22} color="#16a34a" />
+        <div
+          className="alert alert-success"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '12px',
+            background: '#ecfdf5',
+            border: '1px solid #a7f3d0',
+            padding: '14px 18px',
+            borderRadius: '8px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <FiCheckCircle size={26} color="#16a34a" style={{ flexShrink: 0 }} />
             <div>
-              <strong>In-Store Sale Confirmed! (Invoice #{saleResult.sale.invoiceNumber})</strong>
-              <div style={{ fontSize: '0.88rem', marginTop: '2px' }}>
-                {saleResult.message} Website stock updated in real time.
+              <strong style={{ fontSize: '1rem', color: '#065f46' }}>
+                🎉 In-Store Sale Confirmed! (Invoice #{saleResult.sale.invoiceNumber})
+              </strong>
+              <div style={{ fontSize: '0.85rem', color: '#047857', marginTop: '2px' }}>
+                {saleResult.message} Website inventory updated in real-time.
               </div>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            {/* 1-Click Thermal Print Button */}
             <button
               type="button"
               className="btn btn-sm btn-primary"
-              onClick={() => {
-                setReceiptData(saleResult.sale);
-                setShowReceiptModal(true);
-              }}
+              onClick={() => handlePrintDirect(saleResult.sale)}
+              title="Prints 58mm/80mm Thermal Slip immediately"
             >
-              <FiPrinter /> Print Receipt Slip
+              <FiPrinter /> 1-Click Thermal Print
             </button>
+
+            {/* 1-Click WhatsApp Send Button */}
+            {saleResult.sale.customerPhone && (
+              <button
+                type="button"
+                className="btn btn-sm btn-whatsapp"
+                onClick={() => sendWhatsAppBill(saleResult.sale)}
+                title="Send official digital e-bill to customer WhatsApp"
+              >
+                <FiMessageCircle /> Send WhatsApp Bill
+              </button>
+            )}
+
+            {/* AI Bill Preview Button */}
+            <button
+              type="button"
+              className="btn btn-sm btn-outline"
+              onClick={() => openWhatsAppModal(saleResult.sale)}
+              title="Preview AI formatted bill & copy"
+            >
+              <FiShare2 /> AI Bill Preview
+            </button>
+
             <button
               type="button"
               className="btn btn-sm btn-outline"
               onClick={() => setSaleResult(null)}
             >
-              Dismiss
+              <FiX /> Dismiss
             </button>
           </div>
         </div>
@@ -276,7 +427,7 @@ const QuickSell = () => {
             <input
               type="text"
               className="shoe-search-input"
-              placeholder="Search shoe name, brand (e.g. Nike, Campus, Adidas) or SKU..."
+              placeholder="Search shoe name, brand (e.g. Nike, Campus, Puma, Adidas) or SKU..."
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
@@ -285,109 +436,113 @@ const QuickSell = () => {
               onFocus={() => setDropdownOpen(true)}
             />
 
-            {dropdownOpen && filteredProducts.length > 0 && (
+            {/* Dropdown Search Results */}
+            {dropdownOpen && searchTerm.trim() && (
               <div className="shoe-dropdown-results">
-                {filteredProducts.map((p) => (
-                  <div
-                    key={p._id}
-                    className="shoe-dropdown-item"
-                    onClick={() => handleSelectProduct(p)}
-                  >
-                    <img
-                      src={p.primaryImage || '/placeholder-shoe.jpg'}
-                      alt={p.name}
-                      className="dropdown-shoe-thumb"
-                      onError={(e) => {
-                        e.target.src = 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=100';
-                      }}
-                    />
-                    <div className="dropdown-shoe-info">
-                      <div className="dropdown-shoe-name">{p.name}</div>
-                      <div className="dropdown-shoe-meta">
-                        <span>{p.brandName}</span>
-                        <span>•</span>
-                        <span>₹{p.sellingPrice.toLocaleString('en-IN')}</span>
-                        <span>•</span>
-                        <span style={{ color: p.totalStock > 0 ? '#16a34a' : '#dc2626', fontWeight: 600 }}>
-                          {p.totalStock > 0 ? `${p.totalStock} pairs left` : 'Out of Stock'}
-                        </span>
-                      </div>
-                    </div>
+                {filteredProducts.length === 0 ? (
+                  <div style={{ padding: '12px 16px', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                    No shoes found matching "{searchTerm}".
                   </div>
-                ))}
+                ) : (
+                  filteredProducts.slice(0, 10).map((p) => {
+                    const firstImg =
+                      p.primaryImage ||
+                      (p.images && p.images.length > 0 ? p.images[0] : '/placeholder-shoe.png');
+                    const inStockCount = p.variants.reduce((acc, v) => acc + (v.quantity || 0), 0);
+
+                    return (
+                      <div
+                        key={p._id}
+                        className="shoe-dropdown-item"
+                        onClick={() => handleSelectProduct(p)}
+                      >
+                        <img src={firstImg} alt={p.name} className="dropdown-shoe-thumb" />
+                        <div className="dropdown-shoe-info">
+                          <div className="dropdown-shoe-name">{p.name}</div>
+                          <div className="dropdown-shoe-meta">
+                            <span>{p.brandName}</span>
+                            <span>•</span>
+                            <span>₹{p.sellingPrice.toLocaleString('en-IN')}</span>
+                            <span>•</span>
+                            <span style={{ color: inStockCount > 0 ? '#16a34a' : '#dc2626', fontWeight: 600 }}>
+                              {inStockCount > 0 ? `${inStockCount} pairs in store` : 'Out of stock'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             )}
           </div>
 
-          {/* Active Selected Shoe Card */}
+          {/* Selected Shoe Detail & Variant Selector */}
           {selectedProduct ? (
             <div>
               <div className="selected-shoe-banner">
                 <img
-                  src={selectedProduct.primaryImage || '/placeholder-shoe.jpg'}
+                  src={
+                    selectedProduct.primaryImage ||
+                    (selectedProduct.images && selectedProduct.images.length > 0
+                      ? selectedProduct.images[0]
+                      : '/placeholder-shoe.png')
+                  }
                   alt={selectedProduct.name}
                   className="selected-shoe-img"
-                  onError={(e) => {
-                    e.target.src = 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=150';
-                  }}
                 />
                 <div className="selected-shoe-details">
                   <div className="selected-shoe-brand">{selectedProduct.brandName}</div>
-                  <h4 className="selected-shoe-title">{selectedProduct.name}</h4>
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <span className={`selected-shoe-stock-pill ${selectedProduct.totalStock === 0 ? 'out' : selectedProduct.totalStock <= 2 ? 'low' : ''}`}>
-                      {selectedProduct.totalStock > 0 ? `Total Store Stock: ${selectedProduct.totalStock} Pairs` : 'Sold Out In Store'}
-                    </span>
-                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                      SKU: {selectedProduct.sku}
+                  <h4 style={{ margin: '2px 0 6px 0', fontSize: '1.1rem' }}>{selectedProduct.name}</h4>
+                  <div style={{ display: 'flex', gap: '12px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                    <span>SKU: {selectedProduct.sku}</span>
+                    <span>•</span>
+                    <span style={{ color: 'var(--primary-color)', fontWeight: 700 }}>
+                      Showroom MRP: ₹{selectedProduct.sellingPrice.toLocaleString('en-IN')}
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* Step 2: Select Size & Color Variant */}
-              <h3 className="pos-section-title">
-                <FiZap /> Step 2: Select Size Sold (Real-Time In-Store Stock)
+              {/* Step 2: Choose Size / Variant */}
+              <h3 className="pos-section-title" style={{ marginTop: '20px' }}>
+                <FiZap /> Step 2: Select Customer Size & Confirm Stock
               </h3>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
-                Tap the exact size customer purchased. Stock will reduce automatically.
-              </p>
 
-              <div className="variant-selector-grid">
-                {selectedProduct.variants && selectedProduct.variants.length > 0 ? (
-                  selectedProduct.variants.map((v) => {
-                    const isSelected = selectedVariant && selectedVariant._id === v._id;
-                    const isOutOfStock = v.quantity <= 0;
-                    return (
-                      <button
-                        key={v._id}
-                        type="button"
-                        disabled={isOutOfStock}
-                        onClick={() => handleSelectVariant(v)}
-                        className={`variant-pos-btn ${isSelected ? 'selected' : ''}`}
-                      >
-                        <span className="variant-pos-size">Size {v.size}</span>
-                        <span className="variant-pos-color">{v.color}</span>
-                        <span className={`variant-pos-stock ${isOutOfStock ? 'out' : ''}`}>
-                          {isOutOfStock ? 'Sold Out' : `${v.quantity} pair${v.quantity > 1 ? 's' : ''}`}
-                        </span>
-                      </button>
-                    );
-                  })
-                ) : (
-                  <p style={{ color: 'var(--text-muted)' }}>No size variants found for this shoe.</p>
-                )}
+              <div className="variant-pills-grid">
+                {selectedProduct.variants.map((v) => {
+                  const isSelected = selectedVariant && selectedVariant._id === v._id;
+                  const isOutOfStock = v.quantity <= 0;
+
+                  return (
+                    <button
+                      key={v._id}
+                      type="button"
+                      disabled={isOutOfStock}
+                      className={`variant-pill-pos ${isSelected ? 'selected' : ''} ${
+                        isOutOfStock ? 'out-of-stock' : ''
+                      }`}
+                      onClick={() => handleSelectVariant(v)}
+                    >
+                      <div className="variant-pill-size">Size {v.size}</div>
+                      <div className="variant-pill-color">{v.color}</div>
+                      <div className="variant-pill-stock">
+                        {isOutOfStock ? 'Sold Out' : `${v.quantity} in store`}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
 
-              {/* Step 3: Billing & Payment */}
-              <form onSubmit={handleSubmitSale}>
-                <h3 className="pos-section-title" style={{ marginTop: '20px' }}>
-                  <FiDollarSign /> Step 3: Price, Quantity & Payment Mode
+              {/* Step 3: Billing Form */}
+              <form onSubmit={handleSubmitSale} style={{ marginTop: '24px' }}>
+                <h3 className="pos-section-title">
+                  <FiDollarSign /> Step 3: Customer Details & POS Automation
                 </h3>
 
                 <div className="form-grid-3" style={{ marginBottom: '16px' }}>
                   <div className="form-group">
-                    <label>Quantity Sold *</label>
+                    <label>Quantity to Sell (Pairs) *</label>
                     <input
                       type="number"
                       min="1"
@@ -396,7 +551,7 @@ const QuickSell = () => {
                       onChange={(e) => setQuantity(e.target.value)}
                       required
                     />
-                    <span className="field-hint">
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                       Max available: {selectedVariant ? selectedVariant.quantity : 0}
                     </span>
                   </div>
@@ -445,27 +600,98 @@ const QuickSell = () => {
                   </div>
                 </div>
 
-                {/* Customer Details (Optional) */}
-                <div className="form-grid-2" style={{ marginBottom: '16px' }}>
+                {/* Customer Details */}
+                <div className="form-grid-2" style={{ marginBottom: '14px' }}>
                   <div className="form-group">
-                    <label>Customer Name (Optional)</label>
-                    <input
-                      type="text"
-                      placeholder="Walk-in Customer"
-                      value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
-                    />
+                    <label>Customer Name</label>
+                    <div className="input-with-icon" style={{ position: 'relative' }}>
+                      <FiUser style={{ position: 'absolute', left: '10px', top: '12px', color: '#94a3b8' }} />
+                      <input
+                        type="text"
+                        placeholder="e.g. Rahul Kumar (or Walk-in Customer)"
+                        value={customerName}
+                        onChange={(e) => setCustomerName(e.target.value)}
+                        style={{ paddingLeft: '32px' }}
+                      />
+                    </div>
                   </div>
 
                   <div className="form-group">
-                    <label>Customer Mobile No. (Optional)</label>
-                    <input
-                      type="tel"
-                      placeholder="e.g. 9876543210"
-                      value={customerPhone}
-                      onChange={(e) => setCustomerPhone(e.target.value)}
-                    />
+                    <label>Customer Mobile No. (For WhatsApp Bill)</label>
+                    <div className="input-with-icon" style={{ position: 'relative' }}>
+                      <FiPhone style={{ position: 'absolute', left: '10px', top: '12px', color: '#25D366' }} />
+                      <input
+                        type="tel"
+                        placeholder="10-digit Mobile No. (e.g. 9431214500)"
+                        value={customerPhone}
+                        onChange={(e) => setCustomerPhone(e.target.value.replace(/\D/g, ''))}
+                        maxLength={10}
+                        style={{ paddingLeft: '32px' }}
+                      />
+                    </div>
                   </div>
+                </div>
+
+                {/* Automation Controls (Persisted) */}
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: '12px',
+                    margin: '0 0 16px 0',
+                    background: '#f8fafc',
+                    padding: '12px 16px',
+                    borderRadius: '8px',
+                    border: '1px solid #e2e8f0',
+                  }}
+                >
+                  <label
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      cursor: 'pointer',
+                      fontSize: '0.85rem',
+                      fontWeight: 600,
+                      color: '#0f172a',
+                      margin: 0,
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={autoWhatsApp}
+                      onChange={(e) => {
+                        setAutoWhatsApp(e.target.checked);
+                        localStorage.setItem('mb_auto_whatsapp', e.target.checked);
+                      }}
+                      style={{ width: '16px', height: '16px', accentColor: '#25D366' }}
+                    />
+                    <span>📲 Auto-Send WhatsApp Bill</span>
+                  </label>
+
+                  <label
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      cursor: 'pointer',
+                      fontSize: '0.85rem',
+                      fontWeight: 600,
+                      color: '#0f172a',
+                      margin: 0,
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={autoPrintThermal}
+                      onChange={(e) => {
+                        setAutoPrintThermal(e.target.checked);
+                        localStorage.setItem('mb_auto_print', e.target.checked);
+                      }}
+                      style={{ width: '16px', height: '16px', accentColor: '#0f172a' }}
+                    />
+                    <span>🖨️ Auto-Print Thermal Receipt</span>
+                  </label>
                 </div>
 
                 {/* Live Amount Box */}
@@ -477,9 +703,7 @@ const QuickSell = () => {
                       {parsedDiscount > 0 ? ` - ₹${parsedDiscount} Discount` : ''}
                     </div>
                   </div>
-                  <div className="pos-total-amount">
-                    ₹{totalAmount.toLocaleString('en-IN')}
-                  </div>
+                  <div className="pos-total-amount">₹{totalAmount.toLocaleString('en-IN')}</div>
                 </div>
 
                 {/* Submit Button */}
@@ -487,9 +711,17 @@ const QuickSell = () => {
                   type="submit"
                   disabled={submitting || !selectedVariant || selectedVariant.quantity <= 0}
                   className="btn btn-primary"
-                  style={{ width: '100%', padding: '14px', fontSize: '1.05rem', fontWeight: 700 }}
+                  style={{
+                    width: '100%',
+                    padding: '14px',
+                    fontSize: '1.05rem',
+                    fontWeight: 800,
+                    letterSpacing: '0.3px',
+                  }}
                 >
-                  {submitting ? 'Recording Sale & Updating Stock...' : '✓ RECORD IN-STORE SALE (MARK SOLD)'}
+                  {submitting
+                    ? 'Processing Sale, Bill & Print...'
+                    : '⚡ COMPLETE SALE & GENERATE BILL (1-CLICK)'}
                 </button>
               </form>
             </div>
@@ -523,8 +755,13 @@ const QuickSell = () => {
               {recentSales.map((sale) => (
                 <div key={sale._id} className="recent-sale-item">
                   <div className="recent-sale-header">
-                    <span>#{sale.invoiceNumber}</span>
-                    <span>{new Date(sale.saleDate).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
+                    <span style={{ fontWeight: 700 }}>#{sale.invoiceNumber}</span>
+                    <span>
+                      {new Date(sale.saleDate).toLocaleTimeString('en-IN', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </span>
                   </div>
                   <div className="recent-sale-shoe">{sale.productName}</div>
                   <div className="recent-sale-meta">
@@ -533,26 +770,60 @@ const QuickSell = () => {
                     </span>
                     <span className="recent-sale-amount">₹{sale.totalAmount.toLocaleString('en-IN')}</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                    <span>Mode: {sale.paymentMethod}</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      fontSize: '0.75rem',
+                      color: 'var(--text-muted)',
+                      marginTop: '6px',
+                      flexWrap: 'wrap',
+                      gap: '4px',
+                    }}
+                  >
+                    <span>
+                      {sale.customerName && sale.customerName !== 'Walk-in Customer'
+                        ? sale.customerName
+                        : sale.paymentMethod}
+                    </span>
+
+                    {/* Quick 1-Click Action Buttons for each sale */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      {/* 1-Click Thermal Print */}
                       <button
                         type="button"
                         className="btn btn-sm btn-outline"
-                        style={{ padding: '2px 6px', fontSize: '0.75rem' }}
-                        title="Print Slip"
-                        onClick={() => {
-                          setReceiptData(sale);
-                          setShowReceiptModal(true);
-                        }}
+                        style={{ padding: '3px 6px', fontSize: '0.72rem' }}
+                        title="1-Click Print Thermal Slip"
+                        onClick={() => handlePrintDirect(sale)}
                       >
-                        <FiPrinter size={12} /> Slip
+                        <FiPrinter size={12} /> Print
                       </button>
-                      {sale.syncedToGoogleSheet ? (
-                        <span style={{ color: '#16a34a' }}>✓ Synced</span>
-                      ) : (
-                        <span style={{ color: '#f59e0b' }}>Pending</span>
+
+                      {/* 1-Click WhatsApp Direct Send */}
+                      {sale.customerPhone && (
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-whatsapp"
+                          style={{ padding: '3px 6px', fontSize: '0.72rem' }}
+                          title={`Send bill to ${sale.customerPhone}`}
+                          onClick={() => sendWhatsAppBill(sale)}
+                        >
+                          <FiMessageCircle size={12} /> WhatsApp
+                        </button>
                       )}
+
+                      {/* AI Bill Preview & Copy */}
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline"
+                        style={{ padding: '3px 5px', fontSize: '0.72rem' }}
+                        title="View AI Bill Text"
+                        onClick={() => openWhatsAppModal(sale)}
+                      >
+                        <FiShare2 size={11} />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -572,106 +843,142 @@ const QuickSell = () => {
         </div>
       </div>
 
-      {/* Printable Thermal Receipt Modal */}
-      {showReceiptModal && receiptData && (
-        <div className="receipt-modal-backdrop" onClick={() => setShowReceiptModal(false)}>
-          <div className="receipt-modal-card" onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h4 style={{ margin: 0 }}>🖨️ Retail Invoice Slip Preview</h4>
+      {/* ============================================================== */}
+      {/* 1-CLICK THERMAL RECEIPT PRINT AREA (58mm / 80mm EXACT ROLL)    */}
+      {/* ============================================================== */}
+      {receiptData && (
+        <div id="thermal-print-slip" className="thermal-print-area">
+          <div className="receipt-store-title">{storeSettings.shopName || 'NEW MB SHOES'}</div>
+          <div className="receipt-store-sub">
+            {storeSettings.tagline || 'Multi-Brand Footwear Showroom | Bhagalpur'}
+            <br />
+            {storeSettings.address}, {storeSettings.city}
+            <br />
+            Ph: {storeSettings.contactNumber || '+91 94312 14500'}
+          </div>
+
+          <div className="receipt-divider"></div>
+
+          <div className="receipt-meta-row">
+            <span>Invoice: #{receiptData.invoiceNumber}</span>
+            <span>{new Date(receiptData.saleDate || Date.now()).toLocaleDateString('en-IN')}</span>
+          </div>
+          <div className="receipt-meta-row">
+            <span>Cashier: {receiptData.adminName || 'Store Counter'}</span>
+            <span>
+              {new Date(receiptData.saleDate || Date.now()).toLocaleTimeString('en-IN', {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </span>
+          </div>
+          {receiptData.customerName && receiptData.customerName !== 'Walk-in Customer' && (
+            <div className="receipt-meta-row">
+              <span>Customer: {receiptData.customerName}</span>
+              {receiptData.customerPhone && <span>{receiptData.customerPhone}</span>}
+            </div>
+          )}
+
+          <div className="receipt-divider"></div>
+
+          <div style={{ fontSize: '0.85rem', fontWeight: 700, margin: '6px 0 2px' }}>
+            {receiptData.productName}
+          </div>
+          <div className="receipt-meta-row">
+            <span>
+              {receiptData.brandName} • Size {receiptData.size} ({receiptData.color})
+            </span>
+            <span>Qty: {receiptData.quantity}</span>
+          </div>
+          <div className="receipt-meta-row">
+            <span>Rate: ₹{Number(receiptData.sellingPrice).toLocaleString('en-IN')}</span>
+            <span>₹{(receiptData.sellingPrice * receiptData.quantity).toLocaleString('en-IN')}</span>
+          </div>
+          {receiptData.discount > 0 && (
+            <div className="receipt-meta-row" style={{ color: '#dc2626' }}>
+              <span>In-Store Discount:</span>
+              <span>- ₹{Number(receiptData.discount).toLocaleString('en-IN')}</span>
+            </div>
+          )}
+
+          <div className="receipt-divider"></div>
+
+          <div className="receipt-total-row">
+            <span>NET TOTAL PAID:</span>
+            <span>₹{Number(receiptData.totalAmount).toLocaleString('en-IN')}</span>
+          </div>
+          <div className="receipt-meta-row" style={{ marginTop: '4px' }}>
+            <span>Payment Mode:</span>
+            <span style={{ fontWeight: 600 }}>{receiptData.paymentMethod}</span>
+          </div>
+
+          <div className="receipt-divider"></div>
+
+          <div className="receipt-footer-msg">
+            *** THANK YOU FOR VISITING {storeSettings.shopName || 'NEW MB SHOES'}! ***
+            <br />
+            7-Day Size Exchange at all 3 Bhagalpur Branches.
+            <br />
+            (Shah Market • Tatarpur • Tilkamanjhi)
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* WHATSAPP AI DIGITAL BILL PREVIEW MODAL                          */}
+      {/* ============================================================== */}
+      {showWhatsAppModal && whatsAppModalData && (
+        <div className="receipt-modal-backdrop" onClick={() => setShowWhatsAppModal(false)}>
+          <div className="receipt-modal-card" style={{ maxWidth: '520px' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '1.4rem' }}>📱</span>
+                <h4 style={{ margin: 0 }}>WhatsApp Digital Bill Preview</h4>
+              </div>
               <button
                 type="button"
                 className="btn btn-sm btn-outline"
-                onClick={() => setShowReceiptModal(false)}
+                onClick={() => setShowWhatsAppModal(false)}
               >
                 <FiX />
               </button>
             </div>
 
-            {/* Thermal / 3-inch style printable slip */}
-            <div className="receipt-slip-printable">
-              <div className="receipt-store-title">{storeSettings.shopName || 'STEP HOUSE'}</div>
-              <div className="receipt-store-sub">
-                {storeSettings.tagline || 'Multi-Brand Footwear Showroom'}
-                <br />
-                {storeSettings.address}, {storeSettings.city}
-                <br />
-                Ph: {storeSettings.contactNumber}
-              </div>
+            <p style={{ fontSize: '0.82rem', color: '#64748b', margin: '0 0 12px 0' }}>
+              This AI-formatted digital tax invoice will be sent to the customer's WhatsApp with store branding & warranty policy.
+            </p>
 
-              <div className="receipt-divider"></div>
-
-              <div className="receipt-meta-row">
-                <span>Invoice: #{receiptData.invoiceNumber}</span>
-                <span>{new Date(receiptData.saleDate).toLocaleDateString('en-IN')}</span>
-              </div>
-              <div className="receipt-meta-row">
-                <span>Cashier: {receiptData.adminName}</span>
-                <span>{new Date(receiptData.saleDate).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
-              </div>
-              {receiptData.customerName && receiptData.customerName !== 'Walk-in Customer' && (
-                <div className="receipt-meta-row">
-                  <span>Customer: {receiptData.customerName}</span>
-                  {receiptData.customerPhone && <span>{receiptData.customerPhone}</span>}
-                </div>
-              )}
-
-              <div className="receipt-divider"></div>
-
-              {/* Items row */}
-              <div style={{ fontSize: '0.85rem', fontWeight: 700, margin: '6px 0 2px' }}>
-                {receiptData.productName}
-              </div>
-              <div className="receipt-meta-row">
-                <span>{receiptData.brandName} • Size {receiptData.size} ({receiptData.color})</span>
-                <span>Qty: {receiptData.quantity}</span>
-              </div>
-              <div className="receipt-meta-row">
-                <span>Rate: ₹{receiptData.sellingPrice.toLocaleString('en-IN')}</span>
-                <span>₹{(receiptData.sellingPrice * receiptData.quantity).toLocaleString('en-IN')}</span>
-              </div>
-              {receiptData.discount > 0 && (
-                <div className="receipt-meta-row" style={{ color: '#dc2626' }}>
-                  <span>In-Store Discount:</span>
-                  <span>- ₹{receiptData.discount.toLocaleString('en-IN')}</span>
-                </div>
-              )}
-
-              <div className="receipt-divider"></div>
-
-              <div className="receipt-total-row">
-                <span>NET TOTAL PAID:</span>
-                <span>₹{receiptData.totalAmount.toLocaleString('en-IN')}</span>
-              </div>
-              <div className="receipt-meta-row" style={{ marginTop: '4px' }}>
-                <span>Payment Mode:</span>
-                <span style={{ fontWeight: 600 }}>{receiptData.paymentMethod}</span>
-              </div>
-
-              <div className="receipt-divider"></div>
-
-              <div className="receipt-footer-msg">
-                *** THANK YOU FOR VISITING {storeSettings.shopName || 'STEP HOUSE'}! ***
-                <br />
-                Exchange within 7 days with original invoice intact.
-              </div>
+            {/* Chat Bubble Preview */}
+            <div className="whatsapp-chat-bubble">
+              {formatAiWhatsAppBill(whatsAppModalData, storeSettings)}
             </div>
 
             {/* Modal Actions */}
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '10px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px' }}>
               <button
                 type="button"
-                className="btn btn-outline"
-                onClick={() => setShowReceiptModal(false)}
+                className="btn btn-sm btn-outline"
+                onClick={() => copyBillText(whatsAppModalData)}
               >
-                Close
+                {copiedBill ? <FiCheck color="#16a34a" /> : <FiCopy />} {copiedBill ? 'Copied!' : 'Copy Bill Text'}
               </button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={() => window.print()}
-              >
-                <FiPrinter /> Print Receipt Slip (Thermal/A4)
-              </button>
+
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline"
+                  onClick={() => setShowWhatsAppModal(false)}
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-whatsapp"
+                  onClick={() => sendWhatsAppBill(whatsAppModalData)}
+                >
+                  <FiMessageCircle /> Open in WhatsApp
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -681,4 +988,3 @@ const QuickSell = () => {
 };
 
 export default QuickSell;
-

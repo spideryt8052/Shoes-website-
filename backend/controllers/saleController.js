@@ -5,11 +5,11 @@ const StockHistory = require('../models/StockHistory');
 const StoreSettings = require('../models/StoreSettings');
 const { pushToGoogleSheet, GOOGLE_APPS_SCRIPT_TEMPLATE } = require('../services/googleSheetsService');
 
-// Helper to generate Invoice Number
+// Helper to generate Invoice Number (Prefixed with MB for NEW MB SHOES)
 const generateInvoiceNumber = () => {
   const dateStr = new Date().toISOString().slice(2, 10).replace(/-/g, '');
   const randomStr = Math.floor(1000 + Math.random() * 9000);
-  return `SH-${dateStr}-${randomStr}`;
+  return `MB-${dateStr}-${randomStr}`;
 };
 
 // @desc    Record a single in-store sale in real time
@@ -505,5 +505,83 @@ exports.getGoogleSheetScript = (req, res) => {
     success: true,
     scriptTemplate: GOOGLE_APPS_SCRIPT_TEMPLATE,
   });
+};
+
+// @desc    Generate AI-formatted digital WhatsApp bill text for a sale
+// @route   GET /api/sales/:id/whatsapp-bill
+// @access  Private (Admin / Staff)
+exports.getWhatsAppBill = async (req, res, next) => {
+  try {
+    const sale = await Sale.findById(req.params.id);
+    if (!sale) {
+      return res.status(404).json({ success: false, message: 'Sale invoice not found' });
+    }
+
+    const settings = await StoreSettings.findOne();
+    const storeName = settings?.shopName || 'NEW MB SHOES';
+    const storeAddress = settings?.address || 'Shah Market, D.N. Singh Road, Bhagalpur';
+    const contactNo = settings?.contactNumber || '+91 94312 14500';
+    const reviewUrl = settings?.googleReviewUrl || 'https://maps.app.goo.gl/vF32PqqHXmZ6mKTx6';
+
+    const dateFormatted = new Date(sale.saleDate).toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
+    const timeFormatted = new Date(sale.saleDate).toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    const customerGreeting = sale.customerName && sale.customerName !== 'Walk-in Customer'
+      ? `Dear *${sale.customerName}*,`
+      : 'Dear Customer,';
+
+    const billText = `🏪 *${storeName.toUpperCase()}*
+📍 _${storeAddress}_
+📞 Showroom Helpline: ${contactNo}
+─────────────────────
+🧾 *DIGITAL TAX INVOICE & RECEIPT*
+Invoice: *#${sale.invoiceNumber}*
+Date: ${dateFormatted} | ${timeFormatted}
+Cashier: ${sale.adminName || 'Counter POS'}
+─────────────────────
+${customerGreeting}
+Thank you for visiting *NEW MB SHOES Bhagalpur*! Here is your digital e-bill:
+
+👟 *PURCHASED ITEM*:
+• *${sale.productName}*
+  Brand: *${sale.brandName}*
+  Size: *UK ${sale.size}* | Color: *${sale.color}*
+  Quantity: *${sale.quantity} Pair(s)*
+  Rate: ₹${sale.sellingPrice.toLocaleString('en-IN')}
+${sale.discount > 0 ? `  Discount: -₹${sale.discount.toLocaleString('en-IN')}\n` : ''}
+💰 *TOTAL AMOUNT PAID: ₹${sale.totalAmount.toLocaleString('en-IN')}*
+💳 Payment Method: *${sale.paymentMethod}*
+─────────────────────
+🛡️ *7-DAY SIZE EXCHANGE POLICY*:
+• Fit/size exchange is available within 7 days at any of our 3 Bhagalpur branches (Shah Market, Tatarpur, Tilkamanjhi) with this WhatsApp bill.
+• Shoes must be unworn and in original box packaging.
+
+⭐ *How was your showroom trial experience? Review us on Google*:
+${reviewUrl}
+
+✨ *Visit NEW MB SHOES again for fresh branded footwear arrivals!*`;
+
+    const cleanPhone = sale.customerPhone ? sale.customerPhone.replace(/\D/g, '') : '';
+    const formattedPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+    const whatsappUrl = `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${encodeURIComponent(billText)}`;
+
+    res.status(200).json({
+      success: true,
+      invoiceNumber: sale.invoiceNumber,
+      customerPhone: sale.customerPhone,
+      cleanPhone: formattedPhone,
+      billText,
+      whatsappUrl,
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 

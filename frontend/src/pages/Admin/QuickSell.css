@@ -432,21 +432,124 @@
   margin-top: 14px;
 }
 
+/* WhatsApp Styling */
+.btn-whatsapp {
+  background-color: #25D366 !important;
+  color: #ffffff !important;
+  border: 1px solid #1ebe5d !important;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.btn-whatsapp:hover {
+  background-color: #1ebe5d !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 6px -1px rgba(37, 211, 102, 0.3);
+}
+
+.whatsapp-chat-bubble {
+  background-color: #e2f7cb;
+  border-radius: 8px 8px 0 8px;
+  padding: 14px 16px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: #111827;
+  white-space: pre-wrap;
+  border: 1px solid #c8e6a1;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+/* Hidden on normal screen */
+.thermal-print-area {
+  display: none;
+}
+
+/* 1-Click Thermal POS & Standard Print Rules */
 @media print {
-  body * {
-    visibility: hidden;
-  }
-  .receipt-slip-printable, .receipt-slip-printable * {
-    visibility: visible;
-  }
-  .receipt-slip-printable {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 320px;
-    border: none;
-    padding: 0;
+  @page {
+    size: 80mm auto;
     margin: 0;
+  }
+  
+  html, body {
+    width: 80mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .thermal-print-area,
+  .thermal-print-area * {
+    visibility: visible !important;
+    display: block !important;
+  }
+
+  .thermal-print-area {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 72mm !important;
+    margin: 0 auto !important;
+    padding: 4mm 2mm !important;
+    font-family: 'Courier New', Courier, monospace !important;
+    font-size: 11.5px !important;
+    line-height: 1.35 !important;
+    color: #000000 !important;
+    background: #ffffff !important;
+  }
+
+  .thermal-print-area .receipt-store-title {
+    text-align: center !important;
+    font-size: 15px !important;
+    font-weight: 900 !important;
+    margin-bottom: 2px !important;
+  }
+
+  .thermal-print-area .receipt-store-sub {
+    text-align: center !important;
+    font-size: 9.5px !important;
+    margin-bottom: 6px !important;
+    line-height: 1.25 !important;
+  }
+
+  .thermal-print-area .receipt-divider {
+    border-top: 1px dashed #000000 !important;
+    margin: 6px 0 !important;
+  }
+
+  .thermal-print-area .receipt-meta-row {
+    display: flex !important;
+    justify-content: space-between !important;
+    font-size: 10px !important;
+    margin-bottom: 3px !important;
+  }
+
+  .thermal-print-area .receipt-total-row {
+    display: flex !important;
+    justify-content: space-between !important;
+    font-size: 13px !important;
+    font-weight: 900 !important;
+    padding-top: 4px !important;
+    border-top: 1px solid #000 !important;
+    border-bottom: 1px solid #000 !important;
+    margin: 6px 0 !important;
+  }
+
+  .thermal-print-area .receipt-footer-msg {
+    text-align: center !important;
+    font-size: 9.5px !important;
+    margin-top: 8px !important;
   }
 }
 
