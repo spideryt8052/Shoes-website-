@@ -1,4 +1,9 @@
-const PDFDocument = require('pdfkit');
+let PDFDocument;
+try {
+  PDFDocument = require('pdfkit');
+} catch (err) {
+  console.warn('[PDF Module Warning] PDFKit could not be required:', err.message);
+}
 
 /**
  * Generate a professional branded PDF Tax Invoice / E-Bill for NEW MB SHOES Bhagalpur
@@ -9,6 +14,10 @@ const PDFDocument = require('pdfkit');
 function generateInvoicePDF(sale, storeSettings = {}) {
   return new Promise((resolve, reject) => {
     try {
+      if (!PDFDocument) {
+        throw new Error('PDF generator library (pdfkit) is not loaded.');
+      }
+
       const doc = new PDFDocument({
         size: 'A4',
         margin: 36,
@@ -261,3 +270,4 @@ function generateInvoicePDF(sale, storeSettings = {}) {
 }
 
 module.exports = { generateInvoicePDF };
+
