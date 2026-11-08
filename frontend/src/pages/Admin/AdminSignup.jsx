@@ -304,7 +304,7 @@ const AdminSignup = () => {
 
               {/* Showroom Security Passcode (Optional) */}
               <div className="form-group">
-                <label htmlFor="admin-invite-code">Showroom Security Passcode (Optional - Default: 123456)</label>
+                <label htmlFor="admin-invite-code">Showroom Security Passcode (Optional)</label>
                 <div className="input-with-icon">
                   <FiShield className="input-icon" />
                   <input
@@ -312,12 +312,9 @@ const AdminSignup = () => {
                     type="password"
                     value={inviteCode}
                     onChange={(e) => setInviteCode(e.target.value)}
-                    placeholder="Optional: 123456 (or leave blank)"
+                    placeholder="Optional (or enter passcode)"
                   />
                 </div>
-                <small style={{ color: 'var(--text-muted)', fontSize: '0.78rem', marginTop: '4px', display: 'block' }}>
-                  Yeh passcode optional hai. Aap ise khali chhod sakte hain ya <strong>123456</strong> enter kar sakte hain.
-                </small>
               </div>
 
               <button
@@ -391,14 +388,14 @@ const AdminSignup = () => {
             <form onSubmit={handleVerifyInitial2FA} className="login-form">
               <div className="form-group">
                 <label style={{ textAlign: 'center', fontWeight: 700 }}>
-                  Enter 6-Digit PIN from phone app (or Security Passcode: 123456):
+                  Enter 6-Digit PIN from your phone app:
                 </label>
                 <input
                   type="text"
                   maxLength="6"
                   value={totpCode}
                   onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ''))}
-                  placeholder="123456"
+                  placeholder="000000"
                   className="pin-input-big"
                   autoFocus
                   required

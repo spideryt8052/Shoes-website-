@@ -238,7 +238,7 @@ exports.sendEmailOtp = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      message: `Your 6-digit verification code is: ${otp} (or use Security Passcode: 123456)`,
+      message: 'A 6-digit verification code has been dispatched.',
       otpPreview: otp,
       email: admin.email,
     });
@@ -280,7 +280,7 @@ exports.verifyEmailOtp = async (req, res, next) => {
     if (!isOtpValid) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid or expired OTP code. Enter your 6-digit OTP or Security Passcode: 123456.',
+        message: 'Invalid or expired OTP code.',
       });
     }
 
@@ -392,7 +392,7 @@ exports.verify2FA = async (req, res, next) => {
     if (!isValid) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid 6-digit PIN. Enter your Google Authenticator code or Security Passcode: 123456.',
+        message: 'Invalid 6-digit PIN. Please verify the code in your Google Authenticator app.',
       });
     }
 
@@ -452,7 +452,7 @@ exports.request2FAReset = async (req, res, next) => {
 
     return res.status(200).json({
       success: true,
-      message: `Emergency recovery OTP: ${otp} (or use Security Passcode: 123456)`,
+      message: `Emergency recovery OTP has been generated for ${admin.email}.`,
       email: admin.email,
       otpPreview: otp,
     });
