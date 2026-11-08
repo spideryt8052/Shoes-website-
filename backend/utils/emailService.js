@@ -1,10 +1,33 @@
 const nodemailer = require('nodemailer');
 
 const getCredentials = () => {
-  const user = (process.env.EMAIL_USER || process.env.GMAIL_USER || 'yaseenbrp25@gmail.com').trim().replace(/["']/g, '');
-  const pass = (process.env.EMAIL_PASS || process.env.GMAIL_APP_PASSWORD || process.env.GMAIL_PASS || 'tndkthxajxeutlbj')
+  let rawUser = (process.env.EMAIL_USER || process.env.GMAIL_USER || 'yaseenbrp25@gmail.com').trim().replace(/["']/g, '');
+  let rawPass = (process.env.EMAIL_PASS || process.env.GMAIL_APP_PASSWORD || process.env.GMAIL_PASS || 'tndkthxajxeutlbj')
     .trim()
     .replace(/["'\s]/g, '');
+
+  let user = rawUser;
+  let pass = rawPass;
+
+  // Guard against swapped or misconfigured environment variables on Vercel:
+  // If user was set to the 16-character app password (does not contain '@'), fix it:
+  if (!user.includes('@')) {
+    console.warn(`[EmailService] EMAIL_USER "${user}" is not an email. Resetting to yaseenbrp25@gmail.com`);
+    user = 'yaseenbrp25@gmail.com';
+  }
+
+  // If pass contains '@', user and pass were swapped in Vercel settings:
+  if (pass.includes('@')) {
+    console.warn(`[EmailService] EMAIL_PASS contains "@". Swapping credentials...`);
+    const temp = user;
+    user = pass;
+    pass = temp;
+  }
+
+  // Ensure password defaults to the verified 16-digit Google App Password
+  if (!pass || pass.length !== 16) {
+    pass = 'tndkthxajxeutlbj';
+  }
 
   return { user, pass };
 };
@@ -92,11 +115,8 @@ const sendEmailOtpCode = async (toEmail, otp, purpose = 'Admin Counter Login') =
     console.log(`[EmailService] OTP sent successfully to ${toEmail}. MessageId: ${info.messageId}`);
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    const creds = getCredentials();
     console.error(`[EmailService] Failed to send email to ${toEmail}:`, error.message);
-    const maskedUser = creds.user ? creds.user.slice(0, 3) + '***' : 'none';
-    const maskedPass = creds.pass ? creds.pass.slice(0, 2) + '***' + creds.pass.slice(-2) + ` (len=${creds.pass.length})` : 'none';
-    return { success: false, error: `${error.message} [auth: user=${maskedUser}, pass=${maskedPass}]` };
+    return { success: false, error: error.message };
   }
 };
 
