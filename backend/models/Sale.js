@@ -62,7 +62,6 @@ const saleSchema = new mongoose.Schema(
     },
     paymentMethod: {
       type: String,
-      enum: ['Cash', 'UPI / QR', 'Card (POS)', 'Mixed', 'Other'],
       default: 'UPI / QR',
       index: true,
     },
