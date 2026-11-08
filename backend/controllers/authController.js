@@ -41,26 +41,17 @@ const generateTempToken = (adminId) => {
   );
 };
 
-// Helper to construct 2FA response (returns QR code if first time, or prompt if active)
+// Helper to construct 2FA response (returns QR code & secret for seamless app scanning)
 const build2FAResponse = async (admin, res) => {
   const tempToken = generateTempToken(admin._id);
 
-  if (admin.isTwoFactorEnabled && admin.twoFactorSecret) {
-    return res.status(200).json({
-      success: true,
-      require2FA: true,
-      isConfigured: true,
-      tempToken,
-      adminEmail: admin.email,
-      message: 'Enter the 6-digit code from Google Authenticator',
-    });
+  let secret = admin.twoFactorSecret;
+  if (!secret) {
+    secret = totp.generateSecret();
+    admin.twoFactorSecret = secret;
+    admin.isTwoFactorEnabled = false;
+    await admin.save({ validateBeforeSave: false });
   }
-
-  // First time 2FA setup: generate secret & QR code
-  const secret = totp.generateSecret();
-  admin.twoFactorSecret = secret;
-  admin.isTwoFactorEnabled = false;
-  await admin.save({ validateBeforeSave: false });
 
   const otpAuthUrl = totp.getOtpAuthUrl('NEW MB SHOES Bhagalpur', admin.email, secret);
   const qrCodeUrl = totp.getQrCodeUrl(otpAuthUrl);
@@ -68,13 +59,15 @@ const build2FAResponse = async (admin, res) => {
   return res.status(200).json({
     success: true,
     require2FA: true,
-    isConfigured: false,
+    isConfigured: !!admin.isTwoFactorEnabled,
     tempToken,
     secret,
     qrCodeUrl,
     otpAuthUrl,
     adminEmail: admin.email,
-    message: 'Scan the QR code with Google Authenticator on your phone to link your account.',
+    message: admin.isTwoFactorEnabled
+      ? 'Enter the 6-digit code from Google Authenticator'
+      : 'Scan the QR code with Google Authenticator on your phone to link your account.',
   });
 };
 
@@ -263,14 +256,17 @@ exports.googleLogin = async (req, res, next) => {
 // @access  Public
 exports.verify2FA = async (req, res, next) => {
   try {
-    const { tempToken, totpCode } = req.body;
+    const tempToken = req.body.tempToken;
+    const pin = req.body.totpCode || req.body.code || req.body.pin;
 
-    if (!tempToken || !totpCode) {
+    if (!tempToken || !pin) {
       return res.status(400).json({
         success: false,
         message: 'Verification token and 6-digit Google Authenticator PIN are required.',
       });
     }
+
+    const cleanPin = String(pin).trim();
 
     let decoded;
     try {
@@ -295,7 +291,7 @@ exports.verify2FA = async (req, res, next) => {
     }
 
     // Verify 6-digit code with Google Authenticator algorithm (90s window tolerance)
-    const isValid = totp.verifyTOTP(admin.twoFactorSecret, totpCode);
+    const isValid = totp.verifyTOTP(admin.twoFactorSecret, cleanPin);
 
     if (!isValid) {
       return res.status(400).json({

@@ -50,6 +50,7 @@ const AdminLogin = () => {
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [copiedKey, setCopiedKey] = useState(false);
+  const [showQrToggle, setShowQrToggle] = useState(false);
 
   // If already authenticated, redirect to dashboard
   useEffect(() => {
@@ -447,11 +448,11 @@ const AdminLogin = () => {
               <span>Step 1 Verified ({twoFactorConfig.adminEmail})</span>
             </div>
 
-            {/* First time 2FA setup: Show QR Code */}
-            {!twoFactorConfig.isConfigured && (
+            {/* First time 2FA setup OR user requested QR code display */}
+            {(!twoFactorConfig.isConfigured || showQrToggle) && (
               <div className="qr-code-box">
                 <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a' }}>
-                  📱 Scan with Google Authenticator:
+                  📱 Scan with Google Authenticator App:
                 </div>
 
                 {twoFactorConfig.qrCodeUrl && (
@@ -470,23 +471,58 @@ const AdminLogin = () => {
                     onClick={copySecretKey}
                     className="btn btn-outline"
                     style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }}
+                    title="Copy Secret Key"
                   >
-                    {copiedKey ? <FiCheck /> : <FiCopy />}
+                    {copiedKey ? <FiCheck color="#16a34a" /> : <FiCopy />}
                   </button>
                 </div>
                 <p style={{ fontSize: '0.78rem', color: '#64748b', margin: 0 }}>
-                  Open Google Authenticator app on your phone ➔ Tap '+' ➔ Scan QR Code.
+                  Open Google Authenticator on your phone ➔ Tap '+' ➔ Scan QR Code (or enter key manually).
                 </p>
               </div>
             )}
 
             {/* If already configured */}
-            {twoFactorConfig.isConfigured && (
+            {twoFactorConfig.isConfigured && !showQrToggle && (
               <div style={{ textAlign: 'center', padding: '0.5rem 0' }}>
                 <FiSmartphone size={40} style={{ color: '#0f172a', marginBottom: '0.5rem' }} />
                 <p style={{ fontSize: '0.9rem', color: '#475569', margin: 0 }}>
                   Open <strong>Google Authenticator</strong> on your phone and enter your current 6-digit PIN:
                 </p>
+                <button
+                  type="button"
+                  onClick={() => setShowQrToggle(true)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#2563eb',
+                    fontSize: '0.82rem',
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                    marginTop: '0.5rem',
+                  }}
+                >
+                  📲 Need to scan QR code on new phone? Click here
+                </button>
+              </div>
+            )}
+
+            {twoFactorConfig.isConfigured && showQrToggle && (
+              <div style={{ textAlign: 'center', marginBottom: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowQrToggle(false)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#64748b',
+                    fontSize: '0.8rem',
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                  }}
+                >
+                  ▲ Hide QR Code & Key
+                </button>
               </div>
             )}
 
