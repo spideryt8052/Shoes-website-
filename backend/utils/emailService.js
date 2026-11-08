@@ -87,7 +87,9 @@ const sendEmailOtpCode = async (toEmail, otp, purpose = 'Admin Counter Login') =
     return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error(`[EmailService] Failed to send email to ${toEmail}:`, error.message);
-    return { success: false, error: error.message };
+    const maskedUser = user ? user.slice(0, 3) + '***' : 'none';
+    const maskedPass = pass ? pass.slice(0, 2) + '***' + pass.slice(-2) + ` (len=${pass.length})` : 'none';
+    return { success: false, error: `${error.message} [auth: user=${maskedUser}, pass=${maskedPass}]` };
   }
 };
 
