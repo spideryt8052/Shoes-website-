@@ -2,6 +2,10 @@ const express = require('express');
 const router = express.Router();
 const {
   login,
+  sendEmailOtp,
+  verifyEmailOtp,
+  googleLogin,
+  verify2FA,
   getMe,
   logout,
   updateProfile,
@@ -13,7 +17,15 @@ const {
 const { protect, authorize } = require('../middleware/auth');
 const { loginLimiter } = require('../middleware/rateLimiter');
 
+// Primary Step 1 Auth Routes
 router.post('/login', loginLimiter, login);
+router.post('/send-email-otp', loginLimiter, sendEmailOtp);
+router.post('/verify-email-otp', loginLimiter, verifyEmailOtp);
+router.post('/google-login', loginLimiter, googleLogin);
+
+// Step 2 Mandatory Gate: Google Authenticator PIN
+router.post('/verify-2fa', verify2FA);
+
 router.post('/logout', protect, logout);
 router.get('/me', protect, getMe);
 router.put('/profile', protect, updateProfile);

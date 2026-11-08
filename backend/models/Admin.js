@@ -31,6 +31,21 @@ const adminSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    twoFactorSecret: {
+      type: String,
+      select: false,
+    },
+    isTwoFactorEnabled: {
+      type: Boolean,
+      default: false,
+    },
+    emailOtp: {
+      code: { type: String },
+      expiresAt: { type: Date },
+    },
+    googleId: {
+      type: String,
+    },
     lastLogin: {
       type: Date,
     },

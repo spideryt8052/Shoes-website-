@@ -9,41 +9,75 @@
 
 .admin-login-card {
   width: 100%;
-  max-width: 460px;
+  max-width: 480px;
   background-color: #ffffff;
   border: 1px solid var(--border-medium);
   border-radius: var(--radius-lg);
-  padding: 2.8rem 2.2rem;
+  padding: 2.5rem 2rem;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.08);
 }
 
 .login-header {
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 .shield-icon-wrap {
-  width: 64px;
-  height: 64px;
+  width: 60px;
+  height: 60px;
   background-color: #0f172a;
   color: #ffffff;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 1.2rem auto;
+  margin: 0 auto 1rem auto;
+  box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.2);
 }
 
 .login-header h2 {
-  font-size: 1.6rem;
+  font-size: 1.5rem;
   font-weight: 800;
   color: var(--text-main);
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.3rem;
 }
 
 .login-header p {
-  font-size: 0.88rem;
+  font-size: 0.85rem;
   color: var(--text-secondary);
+}
+
+/* Tabs */
+.login-tabs {
+  display: flex;
+  background-color: #f1f5f9;
+  border-radius: 8px;
+  padding: 4px;
+  gap: 4px;
+  margin-bottom: 1.5rem;
+}
+
+.login-tab-btn {
+  flex: 1;
+  padding: 0.6rem 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  transition: all 0.2s ease;
+}
+
+.login-tab-btn.active {
+  background-color: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .login-error-alert {
@@ -57,13 +91,27 @@
   border-radius: var(--radius-sm);
   font-size: 0.85rem;
   font-weight: 500;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.login-success-alert {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background-color: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-bottom: 1.25rem;
 }
 
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 1.3rem;
+  gap: 1.2rem;
 }
 
 .form-group {
@@ -103,7 +151,7 @@
 }
 
 .input-with-icon input:focus {
-  border-color: var(--brand-accent);
+  border-color: #0f172a;
   background-color: #ffffff;
 }
 
@@ -111,8 +159,99 @@
   margin-top: 0.5rem;
 }
 
+/* Step 2 2FA Section */
+.two-factor-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.two-factor-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background-color: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  padding: 0.75rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: #166534;
+}
+
+.qr-code-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background-color: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  padding: 1.2rem;
+  border-radius: 12px;
+  gap: 0.75rem;
+}
+
+.qr-code-img {
+  width: 180px;
+  height: 180px;
+  border-radius: 8px;
+  background-color: #ffffff;
+  padding: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.manual-key-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+}
+
+.manual-key-text {
+  font-family: monospace;
+  font-weight: 700;
+  background-color: #ffffff;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  color: #0f172a;
+}
+
+.pin-input-big {
+  font-size: 1.8rem !important;
+  letter-spacing: 0.4rem;
+  text-align: center;
+  font-weight: 800;
+  padding: 0.6rem !important;
+  color: #0f172a !important;
+  border: 2px solid #0f172a !important;
+  border-radius: 8px !important;
+  background-color: #ffffff !important;
+}
+
+.google-login-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.85rem;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1e293b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.google-login-btn:hover {
+  background-color: #f8fafc;
+  border-color: #94a3b8;
+}
+
 .login-helper-box {
-  margin-top: 1.8rem;
+  margin-top: 1.5rem;
   padding: 0.9rem;
   background-color: var(--bg-subtle);
   border: 1px dashed var(--border-medium);
@@ -137,7 +276,7 @@
 }
 
 .login-footer {
-  margin-top: 1.8rem;
+  margin-top: 1.5rem;
   text-align: center;
 }
 
@@ -152,4 +291,3 @@
   color: var(--text-main);
   text-decoration: underline;
 }
-

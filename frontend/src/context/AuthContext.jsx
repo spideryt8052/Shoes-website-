@@ -37,14 +37,19 @@ export const AuthProvider = ({ children }) => {
     verifyAuth();
   }, []);
 
+  const saveSession = (receivedToken, receivedAdmin) => {
+    setToken(receivedToken);
+    setAdmin(receivedAdmin);
+    localStorage.setItem('step_house_token', receivedToken);
+    localStorage.setItem('step_house_admin', JSON.stringify(receivedAdmin));
+  };
+
   const login = async (email, password) => {
     const res = await api.post('/auth/login', { email, password });
     if (res.data.success) {
-      const { token: receivedToken, admin: receivedAdmin } = res.data;
-      setToken(receivedToken);
-      setAdmin(receivedAdmin);
-      localStorage.setItem('step_house_token', receivedToken);
-      localStorage.setItem('step_house_admin', JSON.stringify(receivedAdmin));
+      if (res.data.token && res.data.admin) {
+        saveSession(res.data.token, res.data.admin);
+      }
       return res.data;
     }
     throw new Error(res.data.message || 'Login failed');
@@ -72,6 +77,7 @@ export const AuthProvider = ({ children }) => {
         loading,
         login,
         logout,
+        saveSession,
       }}
     >
       {children}
