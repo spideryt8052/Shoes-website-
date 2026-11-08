@@ -17,6 +17,7 @@ import {
   FiCopy,
   FiCheck,
   FiMessageCircle,
+  FiDollarSign,
 } from 'react-icons/fi';
 import api from '../../services/api';
 import { useStore } from '../../context/StoreContext';
