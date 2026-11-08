@@ -20,19 +20,9 @@ const connectDB = async () => {
     return cached.conn;
   }
 
-  const uri = process.env.MONGODB_URI;
-
-  if (!uri) {
-    if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
-      const missingErr = new Error(
-        'MONGODB_URI environment variable is missing! Please configure MONGODB_URI in Vercel Project Settings > Environment Variables.'
-      );
-      console.error(`[MongoDB Error]: ${missingErr.message}`);
-      throw missingErr;
-    }
-  }
-
-  const connectionUri = uri || 'mongodb://127.0.0.1:27017/step_house_shoes';
+  const connectionUri =
+    process.env.MONGODB_URI ||
+    'mongodb+srv://yaseenbrp25_db_user:T0KqSDVqlP75jolq@cluster0.i74n0fg.mongodb.net/step_house_shoes?retryWrites=true&w=majority';
 
   if (!cached.promise) {
     cached.promise = mongoose
