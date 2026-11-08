@@ -37,10 +37,10 @@ const AdminLogin = () => {
   // 'FORGOT_EMAIL_OTP'  -> Step 1 of Forgot: Verify registered email with OTP
   // 'FORGOT_NEW_SETUP'  -> Step 2 of Forgot: Old 2FA is wiped, scan brand-new QR code
   const [view, setView] = useState('LOGIN');
-  const [loginTab, setLoginTab] = useState('password'); // 'password' | 'otp' | 'google'
+  const [loginTab, setLoginTab] = useState('otp'); // 'otp' | 'google' | 'password'
 
   // Primary Login Form State
-  const [email, setEmail] = useState('yaseen@newmbshoes.com');
+  const [email, setEmail] = useState('yaseenbrp25@gmail.com');
   const [password, setPassword] = useState('adminpassword123');
   const [emailOtp, setEmailOtp] = useState('');
   const [emailOtpSent, setEmailOtpSent] = useState(false);
@@ -91,18 +91,13 @@ const AdminLogin = () => {
       setLoading(true);
       const res = await api.post('/auth/login', { email: email.trim().toLowerCase(), password });
 
-      if (res.data.success && res.data.require2FA) {
+      if (res.data.success && res.data.token) {
+        saveSession(res.data.token, res.data.admin);
+        navigate('/admin/dashboard', { replace: true });
+      } else if (res.data.success && res.data.require2FA) {
         setTempToken(res.data.tempToken);
         setAdminEmail(res.data.adminEmail || email);
-
-        if (res.data.isConfigured) {
-          // 2FA is already active on phone -> Strictly show PIN input (NO QR code!)
-          setView('2FA_PIN');
-        } else {
-          // Account never finished initial 2FA setup
-          setSetupData({ secret: res.data.secret || '', qrCodeUrl: res.data.qrCodeUrl || '' });
-          setView('2FA_SETUP');
-        }
+        setView('2FA_PIN');
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Invalid email or password.');
@@ -190,16 +185,13 @@ const AdminLogin = () => {
         name: 'Yaseen Jamshed (NEW MB SHOES)',
       });
 
-      if (res.data.success && res.data.require2FA) {
+      if (res.data.success && res.data.token) {
+        saveSession(res.data.token, res.data.admin);
+        navigate('/admin/dashboard', { replace: true });
+      } else if (res.data.success && res.data.require2FA) {
         setTempToken(res.data.tempToken);
         setAdminEmail(res.data.adminEmail || targetEmail);
-
-        if (res.data.isConfigured) {
-          setView('2FA_PIN');
-        } else {
-          setSetupData({ secret: res.data.secret || '', qrCodeUrl: res.data.qrCodeUrl || '' });
-          setView('2FA_SETUP');
-        }
+        setView('2FA_PIN');
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Google authentication failed.');
@@ -384,13 +376,6 @@ const AdminLogin = () => {
             <div className="login-tabs">
               <button
                 type="button"
-                className={`login-tab-btn ${loginTab === 'password' ? 'active' : ''}`}
-                onClick={() => { setLoginTab('password'); setError(''); }}
-              >
-                <FiLock /> Password
-              </button>
-              <button
-                type="button"
                 className={`login-tab-btn ${loginTab === 'otp' ? 'active' : ''}`}
                 onClick={() => { setLoginTab('otp'); setError(''); }}
               >
@@ -402,6 +387,13 @@ const AdminLogin = () => {
                 onClick={() => { setLoginTab('google'); setError(''); }}
               >
                 <FiKey /> Google
+              </button>
+              <button
+                type="button"
+                className={`login-tab-btn ${loginTab === 'password' ? 'active' : ''}`}
+                onClick={() => { setLoginTab('password'); setError(''); }}
+              >
+                <FiLock /> Password
               </button>
             </div>
 
@@ -443,7 +435,7 @@ const AdminLogin = () => {
                   className="btn btn-primary btn-block btn-lg login-submit-btn"
                   disabled={loading}
                 >
-                  {loading ? 'Verifying Password...' : 'Verify Password & Continue to Authenticator →'}
+                  {loading ? 'Signing in...' : 'Sign In to Dashboard →'}
                 </button>
               </form>
             )}

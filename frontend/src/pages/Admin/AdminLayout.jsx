@@ -18,6 +18,7 @@ import {
   FiBell,
   FiZap,
   FiFileText,
+  FiShield,
 } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import { useStore } from '../../context/StoreContext';
@@ -49,6 +50,7 @@ const AdminLayout = () => {
     { label: 'Store Settings', path: '/admin/settings', icon: <FiSettings /> },
     { label: 'Google Reviews Settings', path: '/admin/reviews', icon: <FiStar /> },
     { label: 'Admin Users', path: '/admin/users', icon: <FiUsers /> },
+    { label: 'Security & 2FA', path: '/admin/security', icon: <FiShield /> },
   ];
 
   return (

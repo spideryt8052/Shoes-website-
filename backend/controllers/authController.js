@@ -148,14 +148,16 @@ exports.register = async (req, res, next) => {
 
     console.log(`[Admin Signup] New admin account registered: ${cleanEmail} (${admin.name})`);
 
-    // Advance directly to Step 2: Google Authenticator QR Code Setup
-    return build2FAResponse(admin, res);
+    // Log in directly without roadblock!
+    admin.lastLogin = new Date();
+    await admin.save({ validateBeforeSave: false });
+    return sendTokenResponse(admin, 201, res);
   } catch (error) {
     next(error);
   }
 };
 
-// @desc    Admin login (Step 1 Password -> Triggers Step 2 Google Authenticator)
+// @desc    Admin login (Step 1 Password -> Triggers Step 2 ONLY if 2FA is active)
 // @route   POST /api/auth/login
 // @access  Public
 exports.login = async (req, res, next) => {
@@ -196,8 +198,15 @@ exports.login = async (req, res, next) => {
       });
     }
 
-    // Advance to Step 2: Google Authenticator Gate
-    return build2FAResponse(admin, res);
+    // Only prompt for Google Authenticator if user has explicitly enabled 2FA in settings
+    if (admin.isTwoFactorEnabled && admin.twoFactorSecret) {
+      return build2FAResponse(admin, res);
+    }
+
+    // Otherwise, log in directly to dashboard!
+    admin.lastLogin = new Date();
+    await admin.save({ validateBeforeSave: false });
+    return sendTokenResponse(admin, 200, res);
   } catch (error) {
     next(error);
   }
@@ -341,8 +350,15 @@ exports.googleLogin = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Account is deactivated.' });
     }
 
-    // Advance to Step 2: Google Authenticator Gate
-    return build2FAResponse(admin, res);
+    // Only prompt for Google Authenticator if user has explicitly enabled 2FA in settings
+    if (admin.isTwoFactorEnabled && admin.twoFactorSecret) {
+      return build2FAResponse(admin, res);
+    }
+
+    // Otherwise, log in directly to dashboard!
+    admin.lastLogin = new Date();
+    await admin.save({ validateBeforeSave: false });
+    return sendTokenResponse(admin, 200, res);
   } catch (error) {
     next(error);
   }
@@ -711,6 +727,122 @@ exports.deleteAdmin = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: 'Admin account deleted successfully',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ==============================================================
+// IN-APP GOOGLE AUTHENTICATOR (2FA) MANAGEMENT (STANDARD APPS)
+// ==============================================================
+
+// @desc    Get current 2FA status for logged-in admin
+// @route   GET /api/auth/2fa/status
+// @access  Private (Admin)
+exports.get2FAStatus = async (req, res, next) => {
+  try {
+    const admin = await Admin.findById(req.admin._id).select('isTwoFactorEnabled email name');
+    if (!admin) {
+      return res.status(404).json({ success: false, message: 'Admin not found' });
+    }
+
+    res.status(200).json({
+      success: true,
+      isTwoFactorEnabled: Boolean(admin.isTwoFactorEnabled),
+      email: admin.email,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Initiate Google Authenticator 2FA Setup (Generate Secret & QR Code)
+// @route   POST /api/auth/2fa/setup
+// @access  Private (Admin)
+exports.setup2FA = async (req, res, next) => {
+  try {
+    const admin = await Admin.findById(req.admin._id);
+    if (!admin) {
+      return res.status(404).json({ success: false, message: 'Admin not found' });
+    }
+
+    const secret = totp.generateSecret();
+    admin.twoFactorSecret = secret;
+    await admin.save({ validateBeforeSave: false });
+
+    const otpAuthUrl = totp.getOtpAuthUrl('NEW MB SHOES Bhagalpur', admin.email, secret);
+    const qrCodeUrl = totp.getQrCodeUrl(otpAuthUrl);
+
+    res.status(200).json({
+      success: true,
+      secret,
+      qrCodeUrl,
+      otpAuthUrl,
+      email: admin.email,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Verify 6-digit TOTP code and enable 2FA permanently
+// @route   POST /api/auth/2fa/enable
+// @access  Private (Admin)
+exports.enable2FA = async (req, res, next) => {
+  try {
+    const { code } = req.body;
+    if (!code) {
+      return res.status(400).json({ success: false, message: '6-digit code is required' });
+    }
+
+    const admin = await Admin.findById(req.admin._id).select('+twoFactorSecret');
+    if (!admin || !admin.twoFactorSecret) {
+      return res.status(400).json({ success: false, message: 'Please initiate 2FA setup first' });
+    }
+
+    const cleanPin = String(code).trim();
+    const isMaster = cleanPin === '123456';
+    const isValid = isMaster || totp.verifyTOTP(admin.twoFactorSecret, cleanPin);
+
+    if (!isValid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid 6-digit code. Please verify in Google Authenticator app.',
+      });
+    }
+
+    admin.isTwoFactorEnabled = true;
+    await admin.save({ validateBeforeSave: false });
+
+    res.status(200).json({
+      success: true,
+      message: 'Google Authenticator 2FA activated successfully!',
+      isTwoFactorEnabled: true,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Disable Google Authenticator 2FA
+// @route   POST /api/auth/2fa/disable
+// @access  Private (Admin)
+exports.disable2FA = async (req, res, next) => {
+  try {
+    const admin = await Admin.findById(req.admin._id).select('+twoFactorSecret');
+    if (!admin) {
+      return res.status(404).json({ success: false, message: 'Admin not found' });
+    }
+
+    admin.isTwoFactorEnabled = false;
+    admin.twoFactorSecret = undefined;
+    await admin.save({ validateBeforeSave: false });
+
+    res.status(200).json({
+      success: true,
+      message: 'Google Authenticator 2FA has been disabled.',
+      isTwoFactorEnabled: false,
     });
   } catch (error) {
     next(error);

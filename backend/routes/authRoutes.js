@@ -16,6 +16,10 @@ const {
   createAdmin,
   updateAdmin,
   deleteAdmin,
+  get2FAStatus,
+  setup2FA,
+  enable2FA,
+  disable2FA,
 } = require('../controllers/authController');
 const { protect, authorize } = require('../middleware/auth');
 const { loginLimiter } = require('../middleware/rateLimiter');
@@ -36,6 +40,12 @@ router.post('/reset-2fa-verify', loginLimiter, verify2FAReset);
 router.post('/logout', protect, logout);
 router.get('/me', protect, getMe);
 router.put('/profile', protect, updateProfile);
+
+// In-App 2FA Management (Like other standard apps & websites)
+router.get('/2fa/status', protect, get2FAStatus);
+router.post('/2fa/setup', protect, setup2FA);
+router.post('/2fa/enable', protect, enable2FA);
+router.post('/2fa/disable', protect, disable2FA);
 
 // Admin user management (Admin only)
 router.route('/users')
