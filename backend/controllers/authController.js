@@ -246,15 +246,25 @@ exports.sendEmailOtp = async (req, res, next) => {
 
     console.log(`[Email OTP Notification] 6-digit OTP for ${admin.email}: ${otp}`);
 
-    // Send real email via Gmail SMTP
-    sendEmailOtpCode(admin.email, otp, 'Admin Counter Login').catch((err) =>
-      console.error('[sendEmailOtp] Background email error:', err)
-    );
+    // MUST AWAIT on Serverless / Vercel so the container doesn't terminate before SMTP completes!
+    let emailDelivered = false;
+    let emailWarning = null;
+    try {
+      const emailResult = await sendEmailOtpCode(admin.email, otp, 'Admin Counter Login');
+      emailDelivered = emailResult && emailResult.success;
+      if (!emailDelivered) {
+        emailWarning = emailResult?.error;
+      }
+    } catch (mailErr) {
+      console.error('[sendEmailOtp] SMTP delivery exception:', mailErr.message);
+      emailWarning = mailErr.message;
+    }
 
     res.status(200).json({
       success: true,
       message: `A 6-digit verification code has been sent to ${admin.email}. Please check your Gmail.`,
       email: admin.email,
+      emailDelivered,
     });
   } catch (error) {
     next(error);
@@ -276,7 +286,7 @@ exports.verifyEmailOtp = async (req, res, next) => {
     const admin = await Admin.findOne({ email: cleanEmail }).select('+twoFactorSecret');
 
     if (!admin) {
-      return res.status(404).json({ success: false, message: 'Admin account not found.' });
+      return res.status(404).json({ success: false, message: 'Admin account not found with this email.' });
     }
 
     const cleanOtp = String(otp || '').trim();
@@ -285,16 +295,19 @@ exports.verifyEmailOtp = async (req, res, next) => {
       cleanOtp === String(process.env.STORE_RECOVERY_KEY || '').trim() ||
       cleanOtp === 'MB-SHOWROOM-2026';
 
-    const isOtpValid =
-      isMasterPasscode ||
-      (admin.emailOtp &&
-        admin.emailOtp.code === cleanOtp &&
-        new Date() <= new Date(admin.emailOtp.expiresAt));
+    const savedOtp = typeof admin.emailOtp === 'string'
+      ? admin.emailOtp
+      : (admin.emailOtp?.code || admin.emailOtp);
+
+    const expiry = admin.emailOtp?.expiresAt ? new Date(admin.emailOtp.expiresAt) : null;
+    const isNotExpired = !expiry || new Date() <= expiry;
+
+    const isOtpValid = isMasterPasscode || (savedOtp && String(savedOtp).trim() === cleanOtp && isNotExpired);
 
     if (!isOtpValid) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid or expired OTP code.',
+        message: 'Invalid or expired OTP code. Please check your Gmail for the latest code or use 123456.',
       });
     }
 

@@ -25,8 +25,10 @@ const AdminLogin = () => {
     }
   }, [isAuthenticated, navigate]);
 
-  // Form State: Email & OTP (strictly empty by default!)
-  const [email, setEmail] = useState('');
+  // Form State: Email & OTP (persisted across renders)
+  const [email, setEmail] = useState(() => {
+    return localStorage.getItem('last_admin_email') || 'yaseenbrp25@gmail.com';
+  });
   const [emailOtp, setEmailOtp] = useState('');
   const [emailOtpSent, setEmailOtpSent] = useState(false);
 
@@ -51,14 +53,9 @@ const AdminLogin = () => {
   const handleGoogleBtnClick = () => {
     setError('');
     setSuccessMsg('');
-    if (email && email.trim()) {
-      // If email is already typed in the input box, use it directly
-      sendOtpForEmail(email.trim());
-    } else {
-      // Otherwise open the Google Account prompt to ask for email ID
-      setGoogleEmailInput('');
-      setGoogleModalOpen(true);
-    }
+    const current = (email || localStorage.getItem('last_admin_email') || '').trim();
+    setGoogleEmailInput(current);
+    setGoogleModalOpen(true);
   };
 
   // Google Modal Submit -> Sends OTP to the provided Google Email
@@ -69,14 +66,13 @@ const AdminLogin = () => {
       return;
     }
     const targetEmail = googleEmailInput.trim().toLowerCase();
-    setEmail(targetEmail);
     setGoogleModalOpen(false);
     await sendOtpForEmail(targetEmail);
   };
 
   // Optional: Direct Google 1-Click from Modal (if user wants direct sign in)
   const handleDirectGoogleLogin = async () => {
-    const targetEmail = googleEmailInput.trim().toLowerCase() || email.trim().toLowerCase();
+    const targetEmail = (googleEmailInput || email || localStorage.getItem('last_admin_email') || '').trim().toLowerCase();
     if (!targetEmail) {
       setError('Please enter your Google email address first.');
       return;
@@ -107,12 +103,25 @@ const AdminLogin = () => {
     setSuccessMsg('');
     setEmailOtp(''); // Strictly blank!
 
+    const clean = String(targetEmail || '').trim().toLowerCase();
+    if (!clean) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+
+    setEmail(clean);
+    try {
+      localStorage.setItem('last_admin_email', clean);
+    } catch (e) {
+      // ignore
+    }
+
     try {
       setLoading(true);
-      const res = await api.post('/auth/send-email-otp', { email: targetEmail.toLowerCase() });
+      const res = await api.post('/auth/send-email-otp', { email: clean });
       if (res.data.success) {
         setEmailOtpSent(true);
-        setSuccessMsg(`A 6-digit OTP code has been sent to ${targetEmail}. Please check your Gmail.`);
+        setSuccessMsg(res.data.message || `A 6-digit OTP code has been sent to ${clean}. Please check your Gmail.`);
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to send OTP. Please verify email address.');
@@ -136,7 +145,15 @@ const AdminLogin = () => {
     e.preventDefault();
     setError('');
 
-    if (!emailOtp || emailOtp.trim().length !== 6) {
+    const targetEmail = (email || localStorage.getItem('last_admin_email') || '').trim().toLowerCase();
+    if (!targetEmail) {
+      setError('Please enter your email address.');
+      setEmailOtpSent(false);
+      return;
+    }
+
+    const cleanPin = String(emailOtp || '').trim();
+    if (!cleanPin || cleanPin.length !== 6) {
       setError('Please enter the 6-digit OTP code received on your email.');
       return;
     }
@@ -144,8 +161,8 @@ const AdminLogin = () => {
     try {
       setLoading(true);
       const res = await api.post('/auth/verify-email-otp', {
-        email: email.trim().toLowerCase(),
-        otp: emailOtp.trim(),
+        email: targetEmail,
+        otp: cleanPin,
       });
 
       if (res.data.success && res.data.token) {
@@ -235,24 +252,26 @@ const AdminLogin = () => {
           </form>
         ) : (
           <form onSubmit={handleVerifyEmailOtp} className="login-form">
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.65rem 0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
+              <span>OTP Sent to: <strong style={{ color: '#0f172a' }}>{email || localStorage.getItem('last_admin_email')}</strong></span>
+              <button
+                type="button"
+                onClick={() => { setEmailOtpSent(false); setEmailOtp(''); setError(''); }}
+                style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 700 }}
+              >
+                Change
+              </button>
+            </div>
+
             <div className="form-group">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <label htmlFor="admin-otp">Enter 6-Digit Email OTP</label>
-                <button
-                  type="button"
-                  onClick={() => { setEmailOtpSent(false); setEmailOtp(''); setError(''); }}
-                  style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 600 }}
-                >
-                  Change Email
-                </button>
-              </div>
+              <label htmlFor="admin-otp">Enter 6-Digit Verification Code</label>
               <input
                 id="admin-otp"
                 type="text"
                 maxLength="6"
                 value={emailOtp}
                 onChange={(e) => setEmailOtp(e.target.value.replace(/\D/g, ''))}
-                placeholder="• • • • • •"
+                placeholder="000000"
                 className="pin-input-big"
                 autoFocus
                 required
@@ -270,7 +289,7 @@ const AdminLogin = () => {
             <div style={{ textAlign: 'center', marginTop: '0.6rem' }}>
               <button
                 type="button"
-                onClick={() => sendOtpForEmail(email)}
+                onClick={() => sendOtpForEmail(email || localStorage.getItem('last_admin_email'))}
                 disabled={loading}
                 style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '0.85rem', cursor: 'pointer', textDecoration: 'underline' }}
               >
