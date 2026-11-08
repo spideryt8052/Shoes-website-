@@ -1,10 +1,12 @@
 const mongoose = require('mongoose');
 const dns = require('dns');
 
-// Configure reliable DNS servers to prevent querySrv ECONNREFUSED on strict local DNS
-try {
-  dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1']);
-} catch (e) {}
+// Configure reliable DNS servers for local development (not needed on Vercel cloud)
+if (!process.env.VERCEL) {
+  try {
+    dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1']);
+  } catch (e) {}
+}
 
 // Cache connection across serverless invocations (Vercel)
 let cached = global.mongoose;
