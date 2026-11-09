@@ -24,3 +24,4 @@ const emailOtpSchema = new mongoose.Schema({
 });
 
 module.exports = mongoose.model('EmailOtp', emailOtpSchema);
+

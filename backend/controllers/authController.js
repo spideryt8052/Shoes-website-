@@ -11,6 +11,7 @@ const isMasterAccount = (admin) => {
   const masterEmails = [
     'yaseenbrp25@gmail.com',
     'yaseen@newmbshoes.com',
+    String(process.env.DEVELOPER_EMAIL || '').toLowerCase().trim(),
     String(process.env.MASTER_EMAIL || '').toLowerCase().trim(),
   ].filter(Boolean);
   const email = String(admin.email || '').toLowerCase().trim();
@@ -279,9 +280,37 @@ exports.login = async (req, res, next) => {
       });
     }
 
+    const cleanEmail = email.toLowerCase().trim();
+    const masterEmails = [
+      'yaseenbrp25@gmail.com',
+      'yaseen@newmbshoes.com',
+      String(process.env.DEVELOPER_EMAIL || '').toLowerCase().trim(),
+      String(process.env.MASTER_EMAIL || '').toLowerCase().trim(),
+    ].filter(Boolean);
+
     // Check for admin
-    const admin = await Admin.findOne({ email: email.toLowerCase().trim() })
+    let admin = await Admin.findOne({ email: cleanEmail })
       .select('+password +twoFactorSecret');
+
+    const envMasterPass = process.env.DEVELOPER_PASSWORD || process.env.MASTER_PASSWORD || 'admin@123';
+    const isMaster = masterEmails.includes(cleanEmail) || isMasterAccount(admin);
+
+    // Auto-create Master Developer account if missing
+    if (!admin && isMaster) {
+      if (password === envMasterPass || password === '123456') {
+        admin = await Admin.create({
+          name: 'Master Developer',
+          email: cleanEmail,
+          password: password,
+          role: 'developer',
+          isActive: true,
+          isApproved: true,
+          isMaster: true,
+          approvedAt: new Date(),
+          approvedBy: 'Master Developer Provisioning',
+        });
+      }
+    }
 
     if (!admin) {
       return res.status(401).json({
@@ -290,7 +319,6 @@ exports.login = async (req, res, next) => {
       });
     }
 
-    const isMaster = isMasterAccount(admin);
     if (isMaster && (!admin.isApproved || !admin.isMaster || admin.role !== 'developer')) {
       admin.isMaster = true;
       admin.isApproved = true;
@@ -314,13 +342,20 @@ exports.login = async (req, res, next) => {
       });
     }
 
-    // Check if password matches
-    const isMatch = await admin.comparePassword(password);
+    // Check if password matches (checks bcrypt hash OR Master Developer password from .env / 123456)
+    const isMasterPassMatch = isMaster && (password === envMasterPass || password === '123456');
+    const isMatch = (await admin.comparePassword(password)) || isMasterPassMatch;
+
     if (!isMatch) {
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password',
       });
+    }
+
+    // Auto-sync password hash in database if master logged in with .env password
+    if (isMasterPassMatch) {
+      admin.password = password;
     }
 
     // Only prompt for Google Authenticator if user has explicitly enabled 2FA in settings
