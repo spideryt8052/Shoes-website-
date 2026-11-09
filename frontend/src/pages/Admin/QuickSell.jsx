@@ -295,13 +295,15 @@ const QuickSell = () => {
     try {
       if (sale._id) {
         const res = await api.post(`/sales/${sale._id}/send-whatsapp`);
-        if (res.data.success && (res.data.mode === 'cloud_api' || res.data.mode === 'gateway')) {
+        if (res.data.success && (res.data.mode === 'cloud_api' || res.data.mode === 'gateway' || res.data.mode === 'gateway_text')) {
           alert(`✅ WhatsApp PDF Bill automatically sent directly to customer (+${targetPhone}) in the background!`);
           return;
+        } else if (res.data.mode === 'qr_not_scanned') {
+          alert(`⚠️ UltraMsg Alert: WhatsApp abhi link nahi hua hai. Kripya UltraMsg.com dashboard par jaakar QR Code scan karein. Filhal direct WhatsApp chat khola ja raha hai.`);
         }
       }
     } catch (err) {
-      console.log('Background WhatsApp dispatch not configured, using direct link fallback');
+      console.log('Background WhatsApp dispatch error, using direct link fallback');
     }
 
     // 2. Direct 1-Click WhatsApp Chat (Opens directly to customer number WITHOUT asking for number!)

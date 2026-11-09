@@ -134,8 +134,8 @@ exports.dispatchWhatsAppBill = async (sale) => {
   }
 
   // Method 2: UltraMsg Gateway (No-code / Fast 1-Click WhatsApp instance)
-  const ultraInstance = process.env.ULTRAMSG_INSTANCE_ID;
-  const ultraToken = process.env.ULTRAMSG_TOKEN;
+  const ultraInstance = (process.env.ULTRAMSG_INSTANCE_ID || '').trim();
+  const ultraToken = (process.env.ULTRAMSG_TOKEN || '').trim();
 
   if (ultraInstance && ultraToken) {
     try {
@@ -158,6 +158,53 @@ exports.dispatchWhatsAppBill = async (sale) => {
           success: true,
           mode: 'gateway',
           provider: 'UltraMsg',
+          messageId: data.id,
+          message: `PDF Bill successfully sent to +${targetPhone} via UltraMsg Gateway!`,
+        };
+      } else {
+        console.error('[UltraMsg Error Response]:', data);
+        // If not connected yet or document error, try text chat fallback
+        if (data.error && data.error.includes('not connected')) {
+          return {
+            success: false,
+            mode: 'qr_not_scanned',
+            error: data.error,
+            targetPhone,
+            captionText,
+            waMeLink: `https://wa.me/${targetPhone}?text=${encodeURIComponent(captionText)}`,
+            message: 'UltraMsg me WhatsApp link nahi hai. Kripya UltraMsg dashboard par jaakar QR Code scan karein.',
+          };
+        }
+
+        // Try text message fallback via UltraMsg
+        try {
+          const chatRes = await fetch(`https://api.ultramsg.com/${ultraInstance}/messages/chat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              token: ultraToken,
+              to: targetPhone,
+              body: captionText,
+            }),
+          });
+          const chatData = await chatRes.json();
+          if (chatData.sent === 'true' || chatData.id) {
+            return {
+              success: true,
+              mode: 'gateway_text',
+              provider: 'UltraMsg',
+              messageId: chatData.id,
+              message: `Bill message with PDF & App links sent to +${targetPhone} via UltraMsg!`,
+            };
+          }
+        } catch (chatErr) {
+          console.error('[UltraMsg Chat Fallback Error]:', chatErr.message);
+        }
+      }
+    } catch (err) {
+      console.error('[UltraMsg Exception]:', err.message);
+    }
+  }
           messageId: data.id,
           message: `PDF Bill successfully sent to +${targetPhone} via UltraMsg Gateway!`,
         };
