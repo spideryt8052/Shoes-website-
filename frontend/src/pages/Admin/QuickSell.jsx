@@ -221,13 +221,24 @@ const QuickSell = () => {
   // Filter products for search autocomplete
   const filteredProducts = products.filter((p) => {
     if (!searchTerm.trim()) return false;
-    const term = searchTerm.toLowerCase();
-    return (
-      p.name.toLowerCase().includes(term) ||
-      (p.brandName && p.brandName.toLowerCase().includes(term)) ||
-      (p.sku && p.sku.toLowerCase().includes(term))
-    );
+    const term = searchTerm.toLowerCase().trim();
+    const nameMatch = p.name ? p.name.toLowerCase().includes(term) : false;
+    const brandMatch = p.brandName
+      ? p.brandName.toLowerCase().includes(term)
+      : (p.brand?.name ? p.brand.name.toLowerCase().includes(term) : false);
+    const skuMatch = p.sku ? p.sku.toLowerCase().includes(term) : false;
+    const categoryMatch = p.categoryName ? p.categoryName.toLowerCase().includes(term) : false;
+    return nameMatch || brandMatch || skuMatch || categoryMatch;
   });
+
+  const getProductStock = (p) => {
+    if (!p) return 0;
+    if (typeof p.totalStock === 'number') return p.totalStock;
+    if (Array.isArray(p.variants)) {
+      return p.variants.reduce((acc, v) => acc + (Number(v.quantity) || 0), 0);
+    }
+    return 0;
+  };
 
   const handleSelectProduct = (product) => {
     setSelectedProduct(product);
@@ -623,82 +634,93 @@ const QuickSell = () => {
               className="shoe-search-input"
               placeholder="Search shoe name, brand (e.g. Nike, Campus, Puma, Adidas) or SKU..."
               value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setDropdownOpen(true);
-              }}
-              onFocus={() => {
-                if (searchTerm.trim()) setDropdownOpen(true);
-              }}
+              onChange={(e) => setSearchTerm(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Escape') setDropdownOpen(false);
+                if (e.key === 'Escape') setSearchTerm('');
               }}
             />
             {searchTerm && (
               <button
                 type="button"
                 className="search-clear-btn"
-                onClick={() => {
-                  setSearchTerm('');
-                  setDropdownOpen(false);
-                }}
+                onClick={() => setSearchTerm('')}
                 title="Clear search"
               >
                 <FiX size={16} />
               </button>
-            )}
-
-            {/* Dropdown Search Results */}
-            {dropdownOpen && searchTerm.trim() && (
-              <div className="shoe-dropdown-results">
-                {filteredProducts.length === 0 ? (
-                  <div style={{ padding: '16px', color: '#64748b', fontSize: '0.9rem', textAlign: 'center' }}>
-                    <FiSearch size={22} style={{ display: 'block', margin: '0 auto 8px', opacity: 0.5 }} />
-                    No shoes found matching "<strong>{searchTerm}</strong>".
-                  </div>
-                ) : (
-                  <>
-                    <div className="dropdown-results-header">
-                      <span>Matching Shoes ({filteredProducts.length})</span>
-                      <small style={{ color: '#64748b' }}>Click to select</small>
-                    </div>
-                    {filteredProducts.slice(0, 10).map((p) => {
-                      const firstImg =
-                        p.primaryImage ||
-                        (p.images && p.images.length > 0 ? p.images[0] : '/placeholder-shoe.png');
-                      const inStockCount = p.variants.reduce((acc, v) => acc + (v.quantity || 0), 0);
-
-                      return (
-                        <div
-                          key={p._id}
-                          className="shoe-dropdown-item"
-                          onClick={() => handleSelectProduct(p)}
-                        >
-                          <img src={firstImg} alt={p.name} className="dropdown-shoe-thumb" />
-                          <div className="dropdown-shoe-info">
-                            <div className="dropdown-shoe-name">{p.name}</div>
-                            <div className="dropdown-shoe-meta">
-                              <span>{p.brandName}</span>
-                              <span>•</span>
-                              <span>₹{p.sellingPrice.toLocaleString('en-IN')}</span>
-                              <span>•</span>
-                              <span style={{ color: inStockCount > 0 ? '#16a34a' : '#dc2626', fontWeight: 600 }}>
-                                {inStockCount > 0 ? `${inStockCount} pairs in store` : 'Out of stock'}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </>
-                )}
-              </div>
             )}
           </div>
 
           {/* Selected Shoe Detail & Variant Selector */}
           {selectedProduct ? (
             <div>
+              {/* If user types in search bar while a shoe is already selected, allow switching shoes */}
+              {searchTerm.trim() && (
+                <div className="pos-search-feed-box" style={{ marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <div style={{ fontSize: '0.92rem', fontWeight: 700, color: '#0f172a' }}>
+                      🔍 Switch Shoe: Results for "{searchTerm}" ({filteredProducts.length})
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSearchTerm('')}
+                      className="btn btn-outline"
+                      style={{ padding: '4px 10px', fontSize: '0.78rem' }}
+                    >
+                      Keep Current Shoe
+                    </button>
+                  </div>
+                  {filteredProducts.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '20px', color: '#64748b', fontSize: '0.9rem' }}>
+                      No shoes found matching "{searchTerm}".
+                    </div>
+                  ) : (
+                    <div className="pos-search-grid">
+                      {filteredProducts.slice(0, 4).map((p) => {
+                        const firstImg =
+                          p.primaryImage ||
+                          (p.images && p.images.length > 0 ? p.images[0] : '/placeholder-shoe.png');
+                        const stockCount = getProductStock(p);
+                        return (
+                          <div
+                            key={p._id}
+                            className="pos-search-card-item"
+                            onClick={() => handleSelectProduct(p)}
+                          >
+                            <img src={firstImg} alt={p.name} className="pos-search-card-img" />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: '0.72rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>
+                                {p.brandName}
+                              </div>
+                              <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {p.name}
+                              </div>
+                              <div style={{ display: 'flex', gap: '8px', fontSize: '0.8rem', marginTop: '2px' }}>
+                                <span style={{ fontWeight: 700 }}>₹{p.sellingPrice.toLocaleString('en-IN')}</span>
+                                <span style={{ color: stockCount > 0 ? '#16a34a' : '#dc2626', fontWeight: 600 }}>
+                                  {stockCount > 0 ? `${stockCount} in stock` : 'Out of stock'}
+                                </span>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              className="btn btn-primary"
+                              style={{ padding: '6px 12px', fontSize: '0.8rem', flexShrink: 0 }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSelectProduct(p);
+                              }}
+                            >
+                              Switch →
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="selected-shoe-banner">
                 <img
                   src={
@@ -955,13 +977,13 @@ const QuickSell = () => {
             </div>
           ) : searchTerm.trim() ? (
             <div className="pos-search-feed-box">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <div style={{ fontSize: '0.92rem', fontWeight: 700, color: '#0f172a' }}>
-                  🔍 Search Results: "{searchTerm}" ({filteredProducts.length} shoes found)
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0f172a' }}>
+                  🔍 Matching Shoes for "{searchTerm}" ({filteredProducts.length} found)
                 </div>
                 <button
                   type="button"
-                  onClick={() => { setSearchTerm(''); setDropdownOpen(false); }}
+                  onClick={() => setSearchTerm('')}
                   className="btn btn-outline"
                   style={{ padding: '4px 10px', fontSize: '0.78rem' }}
                 >
@@ -970,9 +992,11 @@ const QuickSell = () => {
               </div>
 
               {filteredProducts.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '32px 10px', color: '#64748b' }}>
-                  <p style={{ margin: 0, fontSize: '0.9rem' }}>
-                    No shoes found matching "{searchTerm}". Try searching by brand name (Nike, Campus, Puma) or shoe model name.
+                <div style={{ textAlign: 'center', padding: '36px 10px', color: '#64748b' }}>
+                  <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>👟</div>
+                  <h4 style={{ margin: '0 0 6px 0', fontSize: '1rem', color: '#0f172a' }}>No Shoes Found</h4>
+                  <p style={{ margin: 0, fontSize: '0.88rem' }}>
+                    "{searchTerm}" se milta julta koi shoe nahi mila. Please try searching by brand (Nike, Campus, Puma) or check spelling.
                   </p>
                 </div>
               ) : (
@@ -981,7 +1005,7 @@ const QuickSell = () => {
                     const firstImg =
                       p.primaryImage ||
                       (p.images && p.images.length > 0 ? p.images[0] : '/placeholder-shoe.png');
-                    const inStockCount = p.variants.reduce((acc, v) => acc + (v.quantity || 0), 0);
+                    const stockCount = getProductStock(p);
 
                     return (
                       <div
@@ -1001,8 +1025,8 @@ const QuickSell = () => {
                             <span style={{ fontWeight: 700, color: '#0f172a' }}>
                               ₹{p.sellingPrice.toLocaleString('en-IN')}
                             </span>
-                            <span style={{ color: inStockCount > 0 ? '#16a34a' : '#dc2626', fontWeight: 600 }}>
-                              {inStockCount > 0 ? `${inStockCount} in store` : 'Out of stock'}
+                            <span style={{ color: stockCount > 0 ? '#16a34a' : '#dc2626', fontWeight: 600 }}>
+                              {stockCount > 0 ? `${stockCount} in store` : 'Out of stock'}
                             </span>
                           </div>
                         </div>
@@ -1025,9 +1049,65 @@ const QuickSell = () => {
             </div>
           ) : (
             <div className="no-shoe-selected-box">
-              <div style={{ fontSize: '3rem', marginBottom: '12px' }}>👟</div>
+              <div style={{ fontSize: '3rem', marginBottom: '10px' }}>👟</div>
               <h4>No Shoe Selected Yet</h4>
-              <p>Type shoe name or brand in the search box above to begin recording a sale.</p>
+              <p style={{ maxWidth: '440px', margin: '0 auto 16px auto', color: '#64748b', lineHeight: 1.5 }}>
+                Type shoe name, brand (e.g. Nike, Campus, Puma, Adidas) or SKU in the search box above to begin recording a sale.
+              </p>
+
+              {/* Quick Pick - Available Showroom Stock */}
+              {products && products.length > 0 && (
+                <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #e2e8f0', textAlign: 'left' }}>
+                  <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>
+                    ⚡ Available Showroom Stock (Click to Select):
+                  </div>
+                  <div className="pos-search-grid">
+                    {products.slice(0, 4).map((p) => {
+                      const firstImg =
+                        p.primaryImage ||
+                        (p.images && p.images.length > 0 ? p.images[0] : '/placeholder-shoe.png');
+                      const stockCount = getProductStock(p);
+
+                      return (
+                        <div
+                          key={p._id}
+                          className="pos-search-card-item"
+                          onClick={() => handleSelectProduct(p)}
+                        >
+                          <img src={firstImg} alt={p.name} className="pos-search-card-img" />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: '0.72rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>
+                              {p.brandName}
+                            </div>
+                            <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {p.name}
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px', fontSize: '0.8rem', marginTop: '2px' }}>
+                              <span style={{ fontWeight: 700, color: '#0f172a' }}>
+                                ₹{p.sellingPrice.toLocaleString('en-IN')}
+                              </span>
+                              <span style={{ color: stockCount > 0 ? '#16a34a' : '#dc2626', fontWeight: 600 }}>
+                                {stockCount > 0 ? `${stockCount} in store` : 'Out of stock'}
+                              </span>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            className="btn btn-outline"
+                            style={{ padding: '6px 12px', fontSize: '0.8rem', flexShrink: 0, fontWeight: 700 }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSelectProduct(p);
+                            }}
+                          >
+                            Select →
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
