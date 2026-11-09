@@ -220,7 +220,7 @@ const AdminSignup = () => {
         {/* ============================================================== */}
         {phase === 'FORM' && (
           <>
-            <form onSubmit={handleRequestOtp} className="login-form">
+            <form onSubmit={handleRequestOtp} className="login-form" autoComplete="off">
               {/* Full Name */}
               <div className="form-group">
                 <label htmlFor="admin-name">Full Name</label>
@@ -231,7 +231,8 @@ const AdminSignup = () => {
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Rahul Kumar / Store Manager"
+                    placeholder="e.g. Yaseen Jamshed"
+                    autoComplete="off"
                     required
                   />
                 </div>
@@ -247,7 +248,8 @@ const AdminSignup = () => {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter your Gmail ID for OTP verification"
+                    placeholder="e.g. yaseenbrp25@gmail.com"
+                    autoComplete="off"
                     required
                   />
                 </div>
@@ -320,6 +322,7 @@ const AdminSignup = () => {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Create secure password"
                     minLength={6}
+                    autoComplete="new-password"
                     required
                   />
                   <button
@@ -354,6 +357,7 @@ const AdminSignup = () => {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Re-enter password"
                     minLength={6}
+                    autoComplete="new-password"
                     required
                   />
                 </div>
@@ -370,6 +374,7 @@ const AdminSignup = () => {
                     value={inviteCode}
                     onChange={(e) => setInviteCode(e.target.value)}
                     placeholder="Optional (leave blank or enter 123456)"
+                    autoComplete="off"
                   />
                 </div>
               </div>

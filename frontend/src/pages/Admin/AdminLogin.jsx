@@ -35,7 +35,7 @@ const AdminLogin = () => {
 
   // ID & Password State
   const [email, setEmail] = useState(() => {
-    return localStorage.getItem('last_admin_email') || 'yaseenbrp25@gmail.com';
+    return localStorage.getItem('last_admin_email') || '';
   });
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -468,7 +468,8 @@ const AdminLogin = () => {
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="name@newmbshoes.com or Gmail ID"
+                      placeholder="e.g. yaseenbrp25@gmail.com"
+                      autoComplete="off"
                       required
                     />
                   </div>
@@ -533,7 +534,8 @@ const AdminLogin = () => {
                           type="email"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
-                          placeholder="Enter your registered Gmail ID"
+                          placeholder="e.g. yaseenbrp25@gmail.com"
+                          autoComplete="off"
                           required
                         />
                       </div>
