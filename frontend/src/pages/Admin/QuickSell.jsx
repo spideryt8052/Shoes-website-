@@ -159,7 +159,7 @@ const QuickSell = () => {
     () => localStorage.getItem('mb_auto_print') === 'true'
   );
   const [autoWhatsApp, setAutoWhatsApp] = useState(
-    () => localStorage.getItem('mb_auto_whatsapp') !== 'false'
+    () => localStorage.getItem('mb_auto_whatsapp') === 'true'
   );
 
   // Receipt Modal State
@@ -431,11 +431,9 @@ const QuickSell = () => {
           }, 300);
         }
 
-        // AUTOMATION 2: 1-Click Auto-Send WhatsApp Digital Bill (If toggle enabled and phone entered)
+        // AUTOMATION 2: Background WhatsApp dispatch (Silent / No window popup)
         if (autoWhatsApp && createdSale.customerPhone) {
-          setTimeout(() => {
-            sendWhatsAppBill(createdSale);
-          }, 600);
+          api.post(`/sales/${createdSale._id}/send-whatsapp`).catch(() => {});
         }
 
         // Reset customer inputs for next customer

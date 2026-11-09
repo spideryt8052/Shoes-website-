@@ -215,3 +215,4 @@ exports.dispatchWhatsAppBill = async (sale) => {
 
 exports.formatInternationalPhone = formatInternationalPhone;
 exports.getBillTextAndLinks = getBillTextAndLinks;
+
