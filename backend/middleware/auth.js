@@ -40,6 +40,14 @@ const protect = async (req, res, next) => {
       });
     }
 
+    const isMaster = admin.isMaster || ['yaseenbrp25@gmail.com', 'yaseen@newmbshoes.com'].includes(admin.email?.toLowerCase());
+    if (!isMaster && admin.isApproved === false) {
+      return res.status(403).json({
+        success: false,
+        message: 'Your account is pending approval by the Developer / Master Admin.',
+      });
+    }
+
     req.admin = admin;
     next();
   } catch (error) {
@@ -50,16 +58,22 @@ const protect = async (req, res, next) => {
   }
 };
 
-// Role-based authorization
+// Role-based authorization (Developer / Master ID automatically authorized for all operations)
 const authorize = (...roles) => {
   return (req, res, next) => {
-    if (!roles.includes(req.admin.role)) {
-      return res.status(403).json({
-        success: false,
-        message: `Admin role '${req.admin.role}' is not authorized to perform this operation.`,
-      });
+    const isMaster =
+      req.admin.isMaster ||
+      req.admin.role === 'developer' ||
+      ['yaseenbrp25@gmail.com', 'yaseen@newmbshoes.com'].includes(req.admin.email?.toLowerCase());
+
+    if (isMaster || roles.includes(req.admin.role)) {
+      return next();
     }
-    next();
+
+    return res.status(403).json({
+      success: false,
+      message: `Admin role '${req.admin.role}' is not authorized to perform this operation.`,
+    });
   };
 };
 

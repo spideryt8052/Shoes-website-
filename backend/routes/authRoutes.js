@@ -16,6 +16,8 @@ const {
   createAdmin,
   updateAdmin,
   deleteAdmin,
+  approveAdmin,
+  rejectAdmin,
   get2FAStatus,
   setup2FA,
   enable2FA,
@@ -47,14 +49,17 @@ router.post('/2fa/setup', protect, setup2FA);
 router.post('/2fa/enable', protect, enable2FA);
 router.post('/2fa/disable', protect, disable2FA);
 
-// Admin user management (Admin only)
+// Admin user management (Admin / Master Developer only)
 router.route('/users')
-  .get(protect, authorize('admin'), getAdmins)
-  .post(protect, authorize('admin'), createAdmin);
+  .get(protect, authorize('admin', 'developer'), getAdmins)
+  .post(protect, authorize('admin', 'developer'), createAdmin);
 
 router.route('/users/:id')
-  .put(protect, authorize('admin'), updateAdmin)
-  .delete(protect, authorize('admin'), deleteAdmin);
+  .put(protect, authorize('admin', 'developer'), updateAdmin)
+  .delete(protect, authorize('admin', 'developer'), deleteAdmin);
+
+router.put('/users/:id/approve', protect, authorize('admin', 'developer'), approveAdmin);
+router.put('/users/:id/reject', protect, authorize('admin', 'developer'), rejectAdmin);
 
 module.exports = router;
 

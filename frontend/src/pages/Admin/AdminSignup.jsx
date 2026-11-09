@@ -94,6 +94,10 @@ const AdminSignup = () => {
         saveSession(res.data.token, res.data.admin);
         navigate('/admin/dashboard', { replace: true });
         return;
+      } else if (res.data.success && res.data.pendingApproval) {
+        setPhase('PENDING_APPROVAL');
+        setSuccessMsg(res.data.message || 'Registration submitted! Master Developer ke approval ke baad login khulega.');
+        return;
       } else if (res.data.success && res.data.require2FA) {
         setTempToken(res.data.tempToken);
         setSetupData({
@@ -423,6 +427,46 @@ const AdminSignup = () => {
                 ← Back to registration details
               </button>
             </form>
+          </div>
+        )}
+
+        {/* ============================================================== */}
+        {/* PHASE 3: PENDING MASTER DEVELOPER APPROVAL                     */}
+        {/* ============================================================== */}
+        {phase === 'PENDING_APPROVAL' && (
+          <div className="two-factor-wrap" style={{ textAlign: 'center', padding: '1rem 0' }}>
+            <div style={{ fontSize: '3.5rem', marginBottom: '0.8rem' }}>⏳</div>
+            <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.5rem' }}>
+              Registration Submitted!
+            </h3>
+            <p style={{ fontSize: '0.92rem', color: '#475569', lineHeight: 1.5, marginBottom: '1.5rem' }}>
+              Aapka account create ho gaya hai. Security policy ke tehat, showroom portal me login karne ke liye <strong>Developer / Master Admin</strong> ka approval anivarya hai.
+            </p>
+
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '1rem', textAlign: 'left', marginBottom: '1.5rem', fontSize: '0.88rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #edf2f7' }}>
+                <span style={{ color: '#64748b' }}>Staff Name:</span>
+                <strong>{name}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #edf2f7' }}>
+                <span style={{ color: '#64748b' }}>Staff Email:</span>
+                <strong>{email}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
+                <span style={{ color: '#64748b' }}>Account Status:</span>
+                <span style={{ background: '#fef3c7', color: '#b45309', padding: '2px 8px', borderRadius: '6px', fontWeight: 700, fontSize: '0.78rem' }}>
+                  ⏳ Pending Master Approval
+                </span>
+              </div>
+            </div>
+
+            <p style={{ fontSize: '0.82rem', color: '#64748b', marginBottom: '1.2rem' }}>
+              Master Developer ke approve karte hi aap apne isi email aur password/OTP se login kar sakenge.
+            </p>
+
+            <Link to="/admin/login" className="btn btn-primary btn-block btn-lg" style={{ textDecoration: 'none', display: 'block' }}>
+              ← Return to Admin Login
+            </Link>
           </div>
         )}
       </div>

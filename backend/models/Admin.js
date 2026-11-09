@@ -24,12 +24,26 @@ const adminSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['admin', 'manager', 'staff'],
-      default: 'admin',
+      enum: ['developer', 'admin', 'manager', 'staff'],
+      default: 'staff',
     },
     isActive: {
       type: Boolean,
       default: true,
+    },
+    isApproved: {
+      type: Boolean,
+      default: false,
+    },
+    isMaster: {
+      type: Boolean,
+      default: false,
+    },
+    approvedBy: {
+      type: String,
+    },
+    approvedAt: {
+      type: Date,
     },
     twoFactorSecret: {
       type: String,

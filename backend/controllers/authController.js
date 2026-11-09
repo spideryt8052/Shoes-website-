@@ -4,6 +4,22 @@ const Admin = require('../models/Admin');
 const totp = require('../utils/totp');
 const { sendEmailOtpCode } = require('../utils/emailService');
 
+// Master Developer account check helper
+const isMasterAccount = (admin) => {
+  if (!admin) return false;
+  const masterEmails = [
+    'yaseenbrp25@gmail.com',
+    'yaseen@newmbshoes.com',
+    String(process.env.MASTER_EMAIL || '').toLowerCase().trim(),
+  ].filter(Boolean);
+  const email = String(admin.email || '').toLowerCase().trim();
+  return (
+    admin.isMaster === true ||
+    admin.role === 'developer' ||
+    masterEmails.includes(email)
+  );
+};
+
 // Helper to generate JWT and send cookie
 const sendTokenResponse = (admin, statusCode, res) => {
   const token = jwt.sign(
@@ -135,23 +151,47 @@ exports.register = async (req, res, next) => {
     // Generate Google Authenticator TOTP secret
     const secret = totp.generateSecret();
 
+    // Check if registering as Master Developer
+    const isMaster = isMasterAccount({ email: cleanEmail });
+
     // Create new Admin record
     const admin = await Admin.create({
       name: name.trim(),
       email: cleanEmail,
       password,
-      role: role && ['admin', 'manager', 'staff'].includes(role) ? role : 'admin',
+      role: isMaster ? 'developer' : (role && ['admin', 'manager', 'staff'].includes(role) ? role : 'staff'),
       twoFactorSecret: secret,
       isTwoFactorEnabled: false,
       isActive: true,
+      isApproved: isMaster, // ONLY the Master Developer is auto-approved!
+      isMaster,
+      approvedAt: isMaster ? new Date() : undefined,
+      approvedBy: isMaster ? 'Master Developer Provisioning' : undefined,
     });
 
-    console.log(`[Admin Signup] New admin account registered: ${cleanEmail} (${admin.name})`);
+    console.log(`[Admin Signup] New admin account registered: ${cleanEmail} (${admin.name}) [isMaster=${isMaster}, isApproved=${admin.isApproved}]`);
 
-    // Log in directly without roadblock!
-    admin.lastLogin = new Date();
-    await admin.save({ validateBeforeSave: false });
-    return sendTokenResponse(admin, 201, res);
+    // Master Developer logs in immediately
+    if (isMaster) {
+      admin.lastLogin = new Date();
+      await admin.save({ validateBeforeSave: false });
+      return sendTokenResponse(admin, 201, res);
+    }
+
+    // All standard users are strictly PENDING APPROVAL! They CANNOT login until Master approves them!
+    return res.status(201).json({
+      success: true,
+      pendingApproval: true,
+      message: 'Account created successfully! Security policy ke tehat naye accounts ko Developer / Master Admin approve karega. Approve hone ke baad hi aap login kar sakenge.',
+      email: cleanEmail,
+      admin: {
+        _id: admin._id,
+        name: admin.name,
+        email: admin.email,
+        role: admin.role,
+        isApproved: false,
+      },
+    });
   } catch (error) {
     next(error);
   }
@@ -179,6 +219,23 @@ exports.login = async (req, res, next) => {
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password',
+      });
+    }
+
+    const isMaster = isMasterAccount(admin);
+    if (isMaster && (!admin.isApproved || !admin.isMaster || admin.role !== 'developer')) {
+      admin.isMaster = true;
+      admin.isApproved = true;
+      admin.isActive = true;
+      admin.role = 'developer';
+      await admin.save({ validateBeforeSave: false });
+    }
+
+    if (!isMaster && admin.isApproved === false) {
+      return res.status(403).json({
+        success: false,
+        pendingApproval: true,
+        message: 'Account approval pending: Aapka account abhi Developer / Master Admin dwara approve hona baaki hai. Approve hone ke baad hi login kar sakenge.',
       });
     }
 
@@ -229,6 +286,23 @@ exports.sendEmailOtp = async (req, res, next) => {
       return res.status(404).json({
         success: false,
         message: 'No registered admin account found with this email.',
+      });
+    }
+
+    const isMaster = isMasterAccount(admin);
+    if (isMaster && (!admin.isApproved || !admin.isMaster)) {
+      admin.isMaster = true;
+      admin.isApproved = true;
+      admin.isActive = true;
+      admin.role = 'developer';
+      await admin.save({ validateBeforeSave: false });
+    }
+
+    if (!isMaster && admin.isApproved === false) {
+      return res.status(403).json({
+        success: false,
+        pendingApproval: true,
+        message: 'Account approval pending: Aapka account abhi Developer / Master Admin dwara approve hona baaki hai. Master Admin ke approve karne ke baad hi OTP generate hoga.',
       });
     }
 
@@ -286,6 +360,19 @@ exports.verifyEmailOtp = async (req, res, next) => {
 
     if (!admin) {
       return res.status(404).json({ success: false, message: 'Admin account not found with this email.' });
+    }
+
+    const isMaster = isMasterAccount(admin);
+    if (!isMaster && admin.isApproved === false) {
+      return res.status(403).json({
+        success: false,
+        pendingApproval: true,
+        message: 'Account approval pending: Aapka account Developer / Master Admin dwara approve hona baaki hai.',
+      });
+    }
+
+    if (!admin.isActive) {
+      return res.status(403).json({ success: false, message: 'Account has been deactivated.' });
     }
 
     const cleanOtp = String(otp || '').trim();
@@ -354,6 +441,23 @@ exports.googleLogin = async (req, res, next) => {
       return res.status(403).json({
         success: false,
         message: `Unauthorized Google account (${cleanEmail}). Only pre-registered showroom staff can log in.`,
+      });
+    }
+
+    const isMaster = isMasterAccount(admin);
+    if (isMaster && (!admin.isApproved || !admin.isMaster || admin.role !== 'developer')) {
+      admin.isMaster = true;
+      admin.isApproved = true;
+      admin.isActive = true;
+      admin.role = 'developer';
+      await admin.save({ validateBeforeSave: false });
+    }
+
+    if (!isMaster && admin.isApproved === false) {
+      return res.status(403).json({
+        success: false,
+        pendingApproval: true,
+        message: 'Account approval pending: Aapka account abhi Developer / Master Admin dwara approve hona baaki hai.',
       });
     }
 
@@ -625,11 +729,21 @@ exports.updateProfile = async (req, res, next) => {
   }
 };
 
-// @desc    Get all admin users
+// @desc    Get all admin users (with Master account auto-sync)
 // @route   GET /api/auth/users
 // @access  Private (Admin role only)
 exports.getAdmins = async (req, res, next) => {
   try {
+    // Ensure master accounts are always provisioned as developer
+    try {
+      await Admin.updateMany(
+        { email: { $in: ['yaseenbrp25@gmail.com', 'yaseen@newmbshoes.com'] } },
+        { $set: { isMaster: true, isApproved: true, isActive: true, role: 'developer' } }
+      );
+    } catch (e) {
+      // ignore
+    }
+
     const admins = await Admin.find().select('-password').sort('-createdAt');
     res.status(200).json({
       success: true,
@@ -641,7 +755,7 @@ exports.getAdmins = async (req, res, next) => {
   }
 };
 
-// @desc    Create new staff / admin user
+// @desc    Create new staff / admin user (Direct creation by Master / Admin is pre-approved)
 // @route   POST /api/auth/users
 // @access  Private (Admin role only)
 exports.createAdmin = async (req, res, next) => {
@@ -652,27 +766,98 @@ exports.createAdmin = async (req, res, next) => {
     if (existing) {
       return res.status(400).json({
         success: false,
-        message: 'An admin account with this email already exists',
+        message: 'An account with this email already exists',
       });
     }
 
+    const isMaster = isMasterAccount({ email });
     const admin = await Admin.create({
-      name,
+      name: name.trim(),
       email: email.toLowerCase().trim(),
       password,
       role: role || 'staff',
+      isApproved: true, // Created directly from dashboard by admin, so it's pre-approved
+      isMaster,
+      isActive: true,
+      approvedAt: new Date(),
+      approvedBy: req.admin?.email || 'Admin Dashboard',
     });
 
     res.status(201).json({
       success: true,
-      message: 'New admin account created successfully',
+      message: 'New user account created and approved successfully',
       admin: {
         _id: admin._id,
         name: admin.name,
         email: admin.email,
         role: admin.role,
         isActive: admin.isActive,
+        isApproved: admin.isApproved,
+        isMaster: admin.isMaster,
       },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Approve a pending admin user (Master Developer / Admin only)
+// @route   PUT /api/auth/users/:id/approve
+// @access  Private (Admin / Developer)
+exports.approveAdmin = async (req, res, next) => {
+  try {
+    const admin = await Admin.findById(req.params.id);
+    if (!admin) {
+      return res.status(404).json({ success: false, message: 'User account not found' });
+    }
+
+    admin.isApproved = true;
+    admin.isActive = true;
+    admin.approvedAt = new Date();
+    admin.approvedBy = req.admin?.email || 'Master Developer';
+    await admin.save({ validateBeforeSave: false });
+
+    console.log(`[Admin Approval] User ${admin.email} was approved by ${req.admin?.email}`);
+
+    res.status(200).json({
+      success: true,
+      message: `User ${admin.name} (${admin.email}) approved! They can now log in.`,
+      admin: {
+        _id: admin._id,
+        name: admin.name,
+        email: admin.email,
+        role: admin.role,
+        isActive: admin.isActive,
+        isApproved: admin.isApproved,
+        isMaster: admin.isMaster,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Reject / remove a pending registration
+// @route   PUT /api/auth/users/:id/reject
+// @access  Private (Admin / Developer)
+exports.rejectAdmin = async (req, res, next) => {
+  try {
+    const admin = await Admin.findById(req.params.id);
+    if (!admin) {
+      return res.status(404).json({ success: false, message: 'User account not found' });
+    }
+
+    if (isMasterAccount(admin)) {
+      return res.status(400).json({ success: false, message: 'Cannot reject the Master Developer account.' });
+    }
+
+    await Admin.findByIdAndDelete(req.params.id);
+
+    console.log(`[Admin Rejection] User registration ${admin.email} was rejected and removed.`);
+
+    res.status(200).json({
+      success: true,
+      message: `User registration for ${admin.name} (${admin.email}) has been rejected and deleted.`,
     });
   } catch (error) {
     next(error);
@@ -684,17 +869,32 @@ exports.createAdmin = async (req, res, next) => {
 // @access  Private (Admin role only)
 exports.updateAdmin = async (req, res, next) => {
   try {
-    const { name, email, password, role, isActive } = req.body;
+    const { name, email, password, role, isActive, isApproved } = req.body;
 
     let admin = await Admin.findById(req.params.id);
     if (!admin) {
       return res.status(404).json({ success: false, message: 'Admin not found' });
     }
 
+    // Protect Master account from non-master edits
+    if (isMasterAccount(admin) && !isMasterAccount(req.admin)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only the Master Developer can modify this account.',
+      });
+    }
+
     if (name) admin.name = name;
     if (email) admin.email = email.toLowerCase().trim();
     if (role) admin.role = role;
     if (typeof isActive === 'boolean') admin.isActive = isActive;
+    if (typeof isApproved === 'boolean') {
+      admin.isApproved = isApproved;
+      if (isApproved) {
+        admin.approvedAt = new Date();
+        admin.approvedBy = req.admin?.email || 'Master Developer';
+      }
+    }
     if (password && password.trim().length >= 6) {
       admin.password = password;
     }
@@ -703,13 +903,15 @@ exports.updateAdmin = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      message: 'Admin updated successfully',
+      message: 'User account updated successfully',
       admin: {
         _id: admin._id,
         name: admin.name,
         email: admin.email,
         role: admin.role,
         isActive: admin.isActive,
+        isApproved: admin.isApproved,
+        isMaster: admin.isMaster,
       },
     });
   } catch (error) {
@@ -729,10 +931,20 @@ exports.deleteAdmin = async (req, res, next) => {
       });
     }
 
-    const admin = await Admin.findByIdAndDelete(req.params.id);
+    const admin = await Admin.findById(req.params.id);
     if (!admin) {
       return res.status(404).json({ success: false, message: 'Admin not found' });
     }
+
+    // Never delete Master Developer
+    if (isMasterAccount(admin)) {
+      return res.status(400).json({
+        success: false,
+        message: 'The Master Developer account cannot be deleted.',
+      });
+    }
+
+    await Admin.findByIdAndDelete(req.params.id);
 
     res.status(200).json({
       success: true,

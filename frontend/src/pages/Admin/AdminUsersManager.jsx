@@ -1,5 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FiUsers, FiPlus, FiTrash2, FiEdit, FiShield, FiKey } from 'react-icons/fi';
+import {
+  FiUsers,
+  FiTrash2,
+  FiEdit,
+  FiShield,
+  FiCheck,
+  FiX,
+  FiClock,
+  FiCheckCircle,
+  FiAlertCircle,
+  FiUserCheck,
+} from 'react-icons/fi';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import './ManageProducts.css';
@@ -16,8 +27,18 @@ const AdminUsersManager = () => {
     password: '',
     role: 'staff',
     isActive: true,
+    isApproved: true,
   });
   const [message, setMessage] = useState({ type: '', text: '' });
+
+  const isMasterUser = (u) => {
+    if (!u) return false;
+    return (
+      u.isMaster === true ||
+      u.role === 'developer' ||
+      ['yaseenbrp25@gmail.com', 'yaseen@newmbshoes.com'].includes(u.email?.toLowerCase())
+    );
+  };
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -46,6 +67,7 @@ const AdminUsersManager = () => {
       password: '',
       role: 'staff',
       isActive: true,
+      isApproved: true,
     });
   };
 
@@ -58,11 +80,49 @@ const AdminUsersManager = () => {
       password: '',
       role: u.role || 'staff',
       isActive: u.isActive !== undefined ? u.isActive : true,
+      isApproved: u.isApproved !== undefined ? u.isApproved : true,
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleDelete = async (id, name) => {
+  const handleApprove = async (id, name) => {
+    try {
+      setLoading(true);
+      const res = await api.put(`/auth/users/${id}/approve`);
+      if (res.data.success) {
+        setMessage({ type: 'success', text: `✅ User "${name}" approved successfully! They can now log in.` });
+        fetchUsers();
+      }
+    } catch (err) {
+      setMessage({ type: 'error', text: err.response?.data?.message || 'Error approving user' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReject = async (id, name) => {
+    if (window.confirm(`Reject and delete registration for "${name}"?`)) {
+      try {
+        setLoading(true);
+        const res = await api.put(`/auth/users/${id}/reject`);
+        if (res.data.success) {
+          setMessage({ type: 'success', text: `❌ Registration for "${name}" rejected and removed.` });
+          fetchUsers();
+        }
+      } catch (err) {
+        setMessage({ type: 'error', text: err.response?.data?.message || 'Error rejecting user' });
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const handleDelete = async (id, name, userObj) => {
+    if (isMasterUser(userObj)) {
+      alert('The Master Developer account cannot be deleted.');
+      return;
+    }
+
     if (id === currentAdmin?._id) {
       alert('You cannot delete your own logged-in admin account.');
       return;
@@ -104,7 +164,7 @@ const AdminUsersManager = () => {
       } else {
         const res = await api.post('/auth/users', formData);
         if (res.data.success) {
-          setMessage({ type: 'success', text: 'New staff user account created!' });
+          setMessage({ type: 'success', text: 'New staff user account created and approved!' });
           resetForm();
           fetchUsers();
         }
@@ -114,13 +174,20 @@ const AdminUsersManager = () => {
     }
   };
 
+  // Separate pending users vs approved users
+  const pendingUsers = users.filter((u) => !isMasterUser(u) && u.isApproved === false);
+  const approvedUsers = users.filter((u) => isMasterUser(u) || u.isApproved !== false);
+
   return (
     <div className="admin-users-page">
       <div className="page-header-row">
         <div>
-          <h1 className="admin-page-heading">Staff & Administrator Accounts</h1>
+          <h1 className="admin-page-heading">
+            <FiShield style={{ marginRight: '8px', verticalAlign: 'middle' }} />
+            Staff Accounts & Master Developer Approvals
+          </h1>
           <p className="admin-page-subtext">
-            Manage who can log into the inventory portal, audit movements, and adjust prices.
+            Security Rule: Koy bhi naya user signup karega toh pehle Developer / Master Admin ke approval ke liye aayega.
           </p>
         </div>
       </div>
@@ -132,10 +199,81 @@ const AdminUsersManager = () => {
         </div>
       )}
 
+      {/* PENDING APPROVALS ALERT BOX (If any users are waiting for Master Developer approval) */}
+      {pendingUsers.length > 0 && (
+        <div style={{ background: '#fffbeb', border: '1px solid #fef3c7', borderRadius: '12px', padding: '1.25rem', marginBottom: '1.5rem', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.8rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '1.4rem' }}>⏳</span>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#92400e', fontWeight: 800 }}>
+                Pending User Approvals ({pendingUsers.length})
+              </h3>
+            </div>
+            <span style={{ background: '#f59e0b', color: '#ffffff', padding: '2px 10px', borderRadius: '9999px', fontSize: '0.78rem', fontWeight: 700 }}>
+              Action Required
+            </span>
+          </div>
+          <p style={{ margin: '0 0 1rem 0', fontSize: '0.88rem', color: '#78350f' }}>
+            Ye users signup page se register huye hain aur login karne ke liye aapke <strong>Master Developer</strong> approval ka intezar kar rahe hain:
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {pendingUsers.map((pu) => (
+              <div
+                key={pu._id}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #fde68a',
+                  borderRadius: '8px',
+                  padding: '12px 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '12px',
+                }}
+              >
+                <div>
+                  <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.95rem' }}>{pu.name}</div>
+                  <div style={{ color: '#64748b', fontSize: '0.84rem' }}>
+                    <code>{pu.email}</code> • Role requested: <strong>{pu.role || 'staff'}</strong> • Registered: {new Date(pu.createdAt).toLocaleDateString()}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => handleApprove(pu._id, pu.name)}
+                    className="btn btn-sm btn-primary"
+                    style={{ background: '#16a34a', borderColor: '#16a34a', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700 }}
+                  >
+                    <FiCheck /> Approve Login
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleReject(pu._id, pu.name)}
+                    className="btn btn-sm btn-outline"
+                    style={{ color: '#dc2626', borderColor: '#fca5a5', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    <FiX /> Reject
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="product-form-grid">
-        {/* Left: Users List */}
+        {/* Left: Active & Approved Users List */}
         <div className="form-main-col">
           <div className="admin-table-container">
+            <div style={{ padding: '1rem', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#0f172a' }}>
+                All Authorized Accounts ({approvedUsers.length})
+              </h3>
+            </div>
+
             {loading ? (
               <div className="admin-loading-state">
                 <div className="spinner"></div>
@@ -149,66 +287,80 @@ const AdminUsersManager = () => {
                     <th>Email Address</th>
                     <th>System Role</th>
                     <th>Status</th>
-                    <th>Last Active</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((u) => (
-                    <tr key={u._id}>
-                      <td>
-                        <strong>{u.name}</strong>
-                        {u._id === currentAdmin?._id && (
-                          <span className="brand-tag-mini" style={{ marginLeft: '0.4rem', color: '#0284c7' }}>
-                            You
+                  {approvedUsers.map((u) => {
+                    const isMaster = isMasterUser(u);
+                    return (
+                      <tr key={u._id}>
+                        <td>
+                          <strong>{u.name}</strong>
+                          {isMaster && (
+                            <span
+                              style={{
+                                marginLeft: '0.5rem',
+                                background: '#fef3c7',
+                                color: '#b45309',
+                                border: '1px solid #fde68a',
+                                padding: '2px 8px',
+                                borderRadius: '4px',
+                                fontSize: '0.72rem',
+                                fontWeight: 800,
+                              }}
+                            >
+                              👑 Master Developer
+                            </span>
+                          )}
+                          {u._id === currentAdmin?._id && !isMaster && (
+                            <span className="brand-tag-mini" style={{ marginLeft: '0.4rem', color: '#0284c7' }}>
+                              You
+                            </span>
+                          )}
+                        </td>
+
+                        <td>
+                          <code>{u.email}</code>
+                        </td>
+
+                        <td>
+                          <span className="brand-tag-mini" style={{ textTransform: 'uppercase', fontWeight: 700 }}>
+                            {isMaster ? 'Developer' : u.role}
                           </span>
-                        )}
-                      </td>
+                        </td>
 
-                      <td>
-                        <code>{u.email}</code>
-                      </td>
+                        <td>
+                          <span className={`stock-badge ${u.isActive ? 'stock-in' : 'stock-out'}`}>
+                            {u.isActive ? 'Active & Approved' : 'Inactive'}
+                          </span>
+                        </td>
 
-                      <td>
-                        <span className="brand-tag-mini">{u.role}</span>
-                      </td>
-
-                      <td>
-                        <span className={`stock-badge ${u.isActive ? 'stock-in' : 'stock-out'}`}>
-                          {u.isActive ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-
-                      <td>
-                        <span className="cat-text">
-                          {u.lastLogin ? new Date(u.lastLogin).toLocaleDateString() : 'Never'}
-                        </span>
-                      </td>
-
-                      <td>
-                        <div className="table-action-btns">
-                          <button
-                            type="button"
-                            className="icon-action-btn edit"
-                            onClick={() => handleEdit(u)}
-                            title="Edit User"
-                          >
-                            <FiEdit />
-                          </button>
-                          {u._id !== currentAdmin?._id && (
+                        <td>
+                          <div className="table-action-btns">
                             <button
                               type="button"
-                              className="icon-action-btn delete"
-                              onClick={() => handleDelete(u._id, u.name)}
-                              title="Delete User"
+                              className="icon-action-btn edit"
+                              onClick={() => handleEdit(u)}
+                              title="Edit User"
                             >
-                              <FiTrash2 />
+                              <FiEdit />
                             </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                            {!isMaster && u._id !== currentAdmin?._id && (
+                              <button
+                                type="button"
+                                className="icon-action-btn delete"
+                                onClick={() => handleDelete(u._id, u.name, u)}
+                                title="Delete User"
+                              >
+                                <FiTrash2 />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             )}
@@ -219,10 +371,10 @@ const AdminUsersManager = () => {
         <div className="form-side-col">
           <div className="form-card">
             <h3 className="card-section-title">
-              {isEditing ? `Edit User: ${formData.name}` : 'Create Staff Account'}
+              {isEditing ? `Edit User: ${formData.name}` : 'Create Pre-Approved Staff Account'}
             </h3>
             <p className="card-subtitle">
-              Grant staff access to update store stocks and handle physical showroom inventory.
+              Developer ya Master Admin yahan se seedhe staff account bana kar approve kar sakte hain.
             </p>
 
             <form onSubmit={handleSubmit} className="login-form">
@@ -230,7 +382,7 @@ const AdminUsersManager = () => {
                 <label>Full Name *</label>
                 <input
                   type="text"
-                  placeholder="e.g. Rajesh Kumar"
+                  placeholder="e.g. Counter Staff 1"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
@@ -241,7 +393,7 @@ const AdminUsersManager = () => {
                 <label>Email Address *</label>
                 <input
                   type="email"
-                  placeholder="staff@stephouse.com"
+                  placeholder="staff@newmbshoes.com"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   required
@@ -250,7 +402,7 @@ const AdminUsersManager = () => {
 
               <div className="form-group">
                 <label>
-                  Password {isEditing ? '(Leave blank to keep existing password)' : '*'}
+                  Password {isEditing ? '(Leave blank to keep current)' : '*'}
                 </label>
                 <input
                   type="password"
@@ -267,13 +419,13 @@ const AdminUsersManager = () => {
                   value={formData.role}
                   onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                 >
-                  <option value="staff">Staff (Inventory & Stock Adjustments)</option>
-                  <option value="manager">Store Manager (Products & Inventory)</option>
+                  <option value="staff">Billing Staff (POS Quick Sell Only)</option>
+                  <option value="manager">Store Manager (Products, Stock & Sales)</option>
                   <option value="admin">Administrator (Full Access)</option>
                 </select>
               </div>
 
-              <div className="checkboxes-stack">
+              <div className="checkboxes-stack" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <label className="checkbox-item">
                   <input
                     type="checkbox"
@@ -282,16 +434,24 @@ const AdminUsersManager = () => {
                   />
                   <span>Account is Active</span>
                 </label>
+                <label className="checkbox-item">
+                  <input
+                    type="checkbox"
+                    checked={formData.isApproved}
+                    onChange={(e) => setFormData({ ...formData, isApproved: e.target.checked })}
+                  />
+                  <span>Approved for Login (Master Authorized)</span>
+                </label>
               </div>
 
-              <div className="modal-actions">
+              <div className="modal-actions" style={{ marginTop: '1rem' }}>
                 {isEditing && (
                   <button type="button" className="btn btn-outline" onClick={resetForm}>
-                    Cancel Edit
+                    Cancel
                   </button>
                 )}
                 <button type="submit" className="btn btn-primary">
-                  {isEditing ? 'Update User' : 'Create User Account'}
+                  {isEditing ? 'Save Changes' : 'Create & Approve Account'}
                 </button>
               </div>
             </form>
@@ -303,4 +463,3 @@ const AdminUsersManager = () => {
 };
 
 export default AdminUsersManager;
-
