@@ -17,6 +17,7 @@ const storeSettingsRoutes = require('./routes/storeSettingsRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
 const stockHistoryRoutes = require('./routes/stockHistoryRoutes');
 const saleRoutes = require('./routes/saleRoutes');
+const removalRequestRoutes = require('./routes/removalRequestRoutes');
 
 const mongoSanitize = require('./middleware/sanitize');
 const { apiLimiter, burstLimiter } = require('./middleware/rateLimiter');
@@ -138,6 +139,7 @@ app.use('/api/store-settings', storeSettingsRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/stock-history', stockHistoryRoutes);
 app.use('/api/sales', saleRoutes);
+app.use('/api/removal-requests', removalRequestRoutes);
 
 // Centralized error handling
 app.use(errorHandler);

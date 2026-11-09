@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, Link } from 'react-router-dom';
 import {
   FiGrid,
@@ -19,7 +19,9 @@ import {
   FiZap,
   FiFileText,
   FiShield,
+  FiTrash2,
 } from 'react-icons/fi';
+import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useStore } from '../../context/StoreContext';
 import './AdminLayout.css';
@@ -29,6 +31,42 @@ const AdminLayout = () => {
   const { storeSettings } = useStore();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
+
+  const isMasterUser = (u) => {
+    if (!u) return false;
+    return (
+      u.isMaster === true ||
+      u.role === 'developer' ||
+      ['yaseenbrp25@gmail.com', 'yaseen@newmbshoes.com'].includes(u.email?.toLowerCase())
+    );
+  };
+
+  const isDeveloper = isMasterUser(admin);
+  const isAdmin = admin?.role === 'admin' || isDeveloper;
+  const isStaff = !isAdmin;
+
+  // Poll for pending removal requests
+  useEffect(() => {
+    let isMounted = true;
+    const fetchPending = async () => {
+      try {
+        const res = await api.get('/removal-requests?status=pending');
+        if (res.data.success && isMounted) {
+          setPendingRequestsCount(res.data.pendingCount || 0);
+        }
+      } catch (err) {
+        // silent error for background badge
+      }
+    };
+
+    fetchPending();
+    const interval = setInterval(fetchPending, 30000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   const handleLogout = async () => {
     if (window.confirm('Are you sure you want to log out of the admin dashboard?')) {
@@ -37,21 +75,43 @@ const AdminLayout = () => {
     }
   };
 
-  const navItems = [
-    { label: 'Dashboard', path: '/admin/dashboard', icon: <FiGrid /> },
-    { label: 'Quick Sell (POS)', path: '/admin/quick-sell', icon: <FiZap /> },
-    { label: 'Sales & Google Sheets', path: '/admin/sales-ledger', icon: <FiFileText /> },
-    { label: 'Manage Products', path: '/admin/products', icon: <FiBox /> },
-    { label: 'Add New Product', path: '/admin/add-product', icon: <FiPlusSquare /> },
-    { label: 'Inventory Management', path: '/admin/inventory', icon: <FiLayers /> },
-    { label: 'Categories', path: '/admin/categories', icon: <FiTag /> },
-    { label: 'Brands', path: '/admin/brands', icon: <FiActivity /> },
-    { label: 'Stock History', path: '/admin/stock-history', icon: <FiClock /> },
-    { label: 'Store Settings', path: '/admin/settings', icon: <FiSettings /> },
-    { label: 'Google Reviews Settings', path: '/admin/reviews', icon: <FiStar /> },
-    { label: 'Admin Users', path: '/admin/users', icon: <FiUsers /> },
-    { label: 'Security & 2FA', path: '/admin/security', icon: <FiShield /> },
-  ];
+  // Role-based Nav Menu items
+  // Staff gets inventory options & removal requests only (NO admin users, NO settings/ledger)
+  // Admin & Developer get full dashboard, including Admin Users & Removal Requests review
+  const navItems = isStaff
+    ? [
+        { label: 'Quick Sell (POS)', path: '/admin/quick-sell', icon: <FiZap /> },
+        { label: 'Manage Products', path: '/admin/products', icon: <FiBox /> },
+        { label: 'Add New Product', path: '/admin/add-product', icon: <FiPlusSquare /> },
+        { label: 'Inventory Management', path: '/admin/inventory', icon: <FiLayers /> },
+        {
+          label: 'Removal Requests',
+          path: '/admin/removal-requests',
+          icon: <FiTrash2 />,
+          badge: pendingRequestsCount > 0 ? pendingRequestsCount : null,
+        },
+      ]
+    : [
+        { label: 'Dashboard', path: '/admin/dashboard', icon: <FiGrid /> },
+        { label: 'Quick Sell (POS)', path: '/admin/quick-sell', icon: <FiZap /> },
+        { label: 'Sales & Google Sheets', path: '/admin/sales-ledger', icon: <FiFileText /> },
+        { label: 'Manage Products', path: '/admin/products', icon: <FiBox /> },
+        { label: 'Add New Product', path: '/admin/add-product', icon: <FiPlusSquare /> },
+        { label: 'Inventory Management', path: '/admin/inventory', icon: <FiLayers /> },
+        {
+          label: 'Removal Requests',
+          path: '/admin/removal-requests',
+          icon: <FiTrash2 />,
+          badge: pendingRequestsCount > 0 ? pendingRequestsCount : null,
+        },
+        { label: 'Categories', path: '/admin/categories', icon: <FiTag /> },
+        { label: 'Brands', path: '/admin/brands', icon: <FiActivity /> },
+        { label: 'Stock History', path: '/admin/stock-history', icon: <FiClock /> },
+        { label: 'Store Settings', path: '/admin/settings', icon: <FiSettings /> },
+        { label: 'Google Reviews Settings', path: '/admin/reviews', icon: <FiStar /> },
+        { label: 'Admin Users', path: '/admin/users', icon: <FiUsers /> },
+        { label: 'Security & 2FA', path: '/admin/security', icon: <FiShield /> },
+      ];
 
   return (
     <div className="admin-container">
@@ -92,6 +152,21 @@ const AdminLayout = () => {
                 >
                   <span className="nav-icon">{item.icon}</span>
                   <span className="nav-label">{item.label}</span>
+                  {item.badge && (
+                    <span
+                      style={{
+                        marginLeft: 'auto',
+                        background: '#ef4444',
+                        color: '#ffffff',
+                        padding: '1px 7px',
+                        borderRadius: '9999px',
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                      }}
+                    >
+                      {item.badge}
+                    </span>
+                  )}
                 </NavLink>
               </li>
             ))}

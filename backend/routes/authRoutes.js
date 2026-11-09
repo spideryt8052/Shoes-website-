@@ -51,17 +51,17 @@ router.post('/2fa/setup', protect, setup2FA);
 router.post('/2fa/enable', protect, enable2FA);
 router.post('/2fa/disable', protect, disable2FA);
 
-// Admin user management (Listing/Updates for staff admins, but Creation & Approvals ONLY for Developer)
+// Admin user management (Developer and Admin only; Staff is strictly blocked)
 router.route('/users')
   .get(protect, authorize('admin', 'developer'), getAdmins)
-  .post(protect, authorize('developer'), createAdmin);
+  .post(protect, authorize('admin', 'developer'), createAdmin);
 
 router.route('/users/:id')
   .put(protect, authorize('admin', 'developer'), updateAdmin)
-  .delete(protect, authorize('developer'), deleteAdmin);
+  .delete(protect, authorize('admin', 'developer'), deleteAdmin);
 
-router.put('/users/:id/approve', protect, authorize('developer'), approveAdmin);
-router.put('/users/:id/reject', protect, authorize('developer'), rejectAdmin);
+router.put('/users/:id/approve', protect, authorize('admin', 'developer'), approveAdmin);
+router.put('/users/:id/reject', protect, authorize('admin', 'developer'), rejectAdmin);
 
 module.exports = router;
 

@@ -531,9 +531,22 @@ exports.updateProduct = async (req, res, next) => {
 
 // @desc    Delete product
 // @route   DELETE /api/products/:id
-// @access  Private (Admin)
+// @access  Private (Admin / Developer only)
 exports.deleteProduct = async (req, res, next) => {
   try {
+    const isMasterOrAdmin =
+      req.admin.role === 'developer' ||
+      req.admin.role === 'admin' ||
+      req.admin.isMaster === true;
+
+    if (!isMasterOrAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: 'Staff direct item delete nahi kar sakta. Kripya Admin ya Developer ko Removal Request bhejein.',
+        requiresRemovalRequest: true,
+      });
+    }
+
     const product = await Product.findByIdAndDelete(req.params.id);
     if (!product) {
       return res.status(404).json({ success: false, message: 'Product not found' });

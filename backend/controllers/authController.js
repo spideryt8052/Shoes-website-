@@ -834,9 +834,19 @@ exports.updateProfile = async (req, res, next) => {
 
 // @desc    Get all admin users (with Master account auto-sync)
 // @route   GET /api/auth/users
-// @access  Private (Admin role only)
+// @access  Private (Admin role gets Staff only; Developer gets all)
 exports.getAdmins = async (req, res, next) => {
   try {
+    const isMasterOperator = isMasterAccount(req.admin) || req.admin?.role === 'developer';
+    const isAdminOperator = req.admin?.role === 'admin';
+
+    if (!isMasterOperator && !isAdminOperator) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: Staff accounts user list access nahi kar sakte.',
+      });
+    }
+
     // Ensure master accounts are always provisioned as developer
     try {
       await Admin.updateMany(
@@ -847,7 +857,11 @@ exports.getAdmins = async (req, res, next) => {
       // ignore
     }
 
-    const admins = await Admin.find().select('-password').sort('-createdAt');
+    // Developer sees ALL accounts (developer, admin, staff)
+    // Store Admin sees ONLY staff accounts!
+    const query = isMasterOperator ? {} : { role: 'staff' };
+
+    const admins = await Admin.find(query).select('-password').sort('-createdAt');
     res.status(200).json({
       success: true,
       count: admins.length,
@@ -858,20 +872,28 @@ exports.getAdmins = async (req, res, next) => {
   }
 };
 
-// @desc    Create new staff / admin user (Direct creation by Master Developer only is pre-approved)
+// @desc    Create new staff / admin user (Developer can create all; Admin can create staff)
 // @route   POST /api/auth/users
-// @access  Private (Master Developer only)
+// @access  Private (Developer or Admin)
 exports.createAdmin = async (req, res, next) => {
   try {
     const isMasterOperator = isMasterAccount(req.admin) || req.admin?.role === 'developer';
-    if (!isMasterOperator) {
+    const isAdminOperator = req.admin?.role === 'admin';
+
+    if (!isMasterOperator && !isAdminOperator) {
       return res.status(403).json({
         success: false,
-        message: 'Access denied: Create Pre-Approved Staff Account ye sirf Master Developer hi kar sakta hai.',
+        message: 'Access denied: User creation sirf Developer aur Admin ke liye hai.',
       });
     }
 
     const { name, email, password, role } = req.body;
+
+    // Regular admin can ONLY create staff accounts
+    let targetRole = role || 'staff';
+    if (!isMasterOperator) {
+      targetRole = 'staff';
+    }
 
     const existing = await Admin.findOne({ email: email.toLowerCase().trim() });
     if (existing) {
@@ -886,17 +908,17 @@ exports.createAdmin = async (req, res, next) => {
       name: name.trim(),
       email: email.toLowerCase().trim(),
       password,
-      role: role || 'staff',
-      isApproved: true, // Created directly from dashboard by admin, so it's pre-approved
+      role: isMaster ? 'developer' : targetRole,
+      isApproved: true, // Created directly from dashboard by admin/developer, so it's pre-approved
       isMaster,
       isActive: true,
       approvedAt: new Date(),
-      approvedBy: req.admin?.email || 'Admin Dashboard',
+      approvedBy: req.admin?.email || (isMasterOperator ? 'Developer' : 'Store Admin'),
     });
 
     res.status(201).json({
       success: true,
-      message: 'New user account created and approved successfully',
+      message: `Staff user account "${admin.name}" created and approved successfully!`,
       admin: {
         _id: admin._id,
         name: admin.name,
@@ -912,16 +934,18 @@ exports.createAdmin = async (req, res, next) => {
   }
 };
 
-// @desc    Approve a pending admin user (Master Developer only)
+// @desc    Approve a pending admin user (Developer can approve all; Admin can approve staff)
 // @route   PUT /api/auth/users/:id/approve
-// @access  Private (Master Developer only)
+// @access  Private (Developer / Admin)
 exports.approveAdmin = async (req, res, next) => {
   try {
     const isMasterOperator = isMasterAccount(req.admin) || req.admin?.role === 'developer';
-    if (!isMasterOperator) {
+    const isAdminOperator = req.admin?.role === 'admin';
+
+    if (!isMasterOperator && !isAdminOperator) {
       return res.status(403).json({
         success: false,
-        message: 'Access denied: Staff accounts ko approve sirf Master Developer hi kar sakta hai.',
+        message: 'Access denied: Accounts ko approve sirf Developer aur Admin hi kar sakte hain.',
       });
     }
 
@@ -930,10 +954,18 @@ exports.approveAdmin = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'User account not found' });
     }
 
+    // Regular admin can only approve staff registrations
+    if (!isMasterOperator && admin.role !== 'staff') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: Admin sirf Staff accounts ko approve kar sakta hai.',
+      });
+    }
+
     admin.isApproved = true;
     admin.isActive = true;
     admin.approvedAt = new Date();
-    admin.approvedBy = req.admin?.email || 'Master Developer';
+    admin.approvedBy = req.admin?.email || (isMasterOperator ? 'Master Developer' : 'Store Admin');
     await admin.save({ validateBeforeSave: false });
 
     console.log(`[Admin Approval] User ${admin.email} was approved by ${req.admin?.email}`);
@@ -956,16 +988,18 @@ exports.approveAdmin = async (req, res, next) => {
   }
 };
 
-// @desc    Reject / remove a pending registration (Master Developer only)
+// @desc    Reject / remove a pending registration (Developer can reject all; Admin can reject staff)
 // @route   PUT /api/auth/users/:id/reject
-// @access  Private (Master Developer only)
+// @access  Private (Developer / Admin)
 exports.rejectAdmin = async (req, res, next) => {
   try {
     const isMasterOperator = isMasterAccount(req.admin) || req.admin?.role === 'developer';
-    if (!isMasterOperator) {
+    const isAdminOperator = req.admin?.role === 'admin';
+
+    if (!isMasterOperator && !isAdminOperator) {
       return res.status(403).json({
         success: false,
-        message: 'Access denied: Registrations ko reject sirf Master Developer hi kar sakta hai.',
+        message: 'Access denied: Registrations ko reject sirf Developer aur Admin hi kar sakte hain.',
       });
     }
 
@@ -976,6 +1010,14 @@ exports.rejectAdmin = async (req, res, next) => {
 
     if (isMasterAccount(admin)) {
       return res.status(400).json({ success: false, message: 'Cannot reject the Master Developer account.' });
+    }
+
+    // Regular admin can only reject staff registrations
+    if (!isMasterOperator && admin.role !== 'staff') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: Admin sirf Staff accounts ko reject kar sakta hai.',
+      });
     }
 
     await Admin.findByIdAndDelete(req.params.id);
@@ -1048,9 +1090,16 @@ exports.updateAdmin = async (req, res, next) => {
 
 // @desc    Delete admin user
 // @route   DELETE /api/auth/users/:id
-// @access  Private (Admin role only)
+// @access  Private (Developer or Admin)
 exports.deleteAdmin = async (req, res, next) => {
   try {
+    const isMasterOperator = isMasterAccount(req.admin) || req.admin?.role === 'developer';
+    const isAdminOperator = req.admin?.role === 'admin';
+
+    if (!isMasterOperator && !isAdminOperator) {
+      return res.status(403).json({ success: false, message: 'Access denied.' });
+    }
+
     if (req.params.id === req.admin._id.toString()) {
       return res.status(400).json({
         success: false,
@@ -1071,11 +1120,19 @@ exports.deleteAdmin = async (req, res, next) => {
       });
     }
 
+    // Regular admin can ONLY delete staff accounts
+    if (!isMasterOperator && admin.role !== 'staff') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: Admin sirf Staff accounts ko delete kar sakta hai.',
+      });
+    }
+
     await Admin.findByIdAndDelete(req.params.id);
 
     res.status(200).json({
       success: true,
-      message: 'Admin account deleted successfully',
+      message: 'Account deleted successfully',
     });
   } catch (error) {
     next(error);

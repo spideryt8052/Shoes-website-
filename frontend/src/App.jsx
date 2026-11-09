@@ -30,6 +30,7 @@ import StockHistoryView from './pages/Admin/StockHistoryView';
 import StoreSettingsView from './pages/Admin/StoreSettingsView';
 import GoogleReviewsManager from './pages/Admin/GoogleReviewsManager';
 import AdminUsersManager from './pages/Admin/AdminUsersManager';
+import RemovalRequestsManager from './pages/Admin/RemovalRequestsManager';
 import SecuritySettings from './pages/Admin/SecuritySettings';
 
 function App() {
@@ -76,6 +77,7 @@ function App() {
               <Route path="settings" element={<StoreSettingsView />} />
               <Route path="reviews" element={<GoogleReviewsManager />} />
               <Route path="users" element={<AdminUsersManager />} />
+              <Route path="removal-requests" element={<RemovalRequestsManager />} />
               <Route path="security" element={<SecuritySettings />} />
             </Route>
 
