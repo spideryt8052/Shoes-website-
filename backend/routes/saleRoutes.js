@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { protect } = require('../middleware/auth');
+const { protect, authorize } = require('../middleware/auth');
 const {
   recordSale,
   recordBulkSales,
@@ -22,12 +22,14 @@ router.use(protect);
 
 router.post('/', recordSale);
 router.post('/bulk', recordBulkSales);
-router.get('/', getSales);
-router.get('/export-excel', exportToExcel);
-router.get('/export-csv', exportToCSV);
-router.post('/sync-google-sheet', syncToGoogleSheets);
-router.get('/google-sheet-script', getGoogleSheetScript);
 router.get('/:id/whatsapp-bill', getWhatsAppBill);
+
+// Store Financial Ledger & Reports (Admin / Developer only)
+router.get('/', authorize('admin', 'developer'), getSales);
+router.get('/export-excel', authorize('admin', 'developer'), exportToExcel);
+router.get('/export-csv', authorize('admin', 'developer'), exportToCSV);
+router.post('/sync-google-sheet', authorize('admin', 'developer'), syncToGoogleSheets);
+router.get('/google-sheet-script', authorize('admin', 'developer'), getGoogleSheetScript);
 
 module.exports = router;
 

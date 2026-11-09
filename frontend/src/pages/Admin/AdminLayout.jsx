@@ -76,14 +76,13 @@ const AdminLayout = () => {
   };
 
   // Role-based Nav Menu items
-  // Staff gets inventory options & removal requests only (NO admin users, NO settings/ledger)
+  // Staff gets inventory options & removal requests only (NO admin users, NO quick-sell, NO settings/ledger)
   // Admin & Developer get full dashboard, including Admin Users & Removal Requests review
   const navItems = isStaff
     ? [
-        { label: 'Quick Sell (POS)', path: '/admin/quick-sell', icon: <FiZap /> },
+        { label: 'Inventory Management', path: '/admin/inventory', icon: <FiLayers /> },
         { label: 'Manage Products', path: '/admin/products', icon: <FiBox /> },
         { label: 'Add New Product', path: '/admin/add-product', icon: <FiPlusSquare /> },
-        { label: 'Inventory Management', path: '/admin/inventory', icon: <FiLayers /> },
         {
           label: 'Removal Requests',
           path: '/admin/removal-requests',

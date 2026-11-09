@@ -18,17 +18,21 @@ import { useStore } from '../../context/StoreContext';
 import './AdminLogin.css';
 
 const AdminLogin = () => {
-  const { saveSession, isAuthenticated } = useAuth();
+  const { saveSession, isAuthenticated, admin } = useAuth();
   const { storeSettings } = useStore();
   const navigate = useNavigate();
   const location = useLocation();
 
+  const getLoginDestination = (adminUser) => {
+    return adminUser?.role === 'staff' ? '/admin/inventory' : '/admin/dashboard';
+  };
+
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/admin/dashboard', { replace: true });
+      navigate(getLoginDestination(admin), { replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, admin, navigate]);
 
   // Login Mode: 'PASSWORD' (ID & Password) or 'OTP' (Email OTP)
   const [loginMode, setLoginMode] = useState('PASSWORD');
@@ -121,7 +125,7 @@ const AdminLogin = () => {
       // Case B: Direct login success
       if (res.data.success && res.data.token) {
         saveSession(res.data.token, res.data.admin);
-        navigate('/admin/dashboard', { replace: true });
+        navigate(getLoginDestination(res.data.admin), { replace: true });
       }
     } catch (err) {
       if (err.response?.data?.pendingApproval) {
@@ -211,7 +215,7 @@ const AdminLogin = () => {
       // Login success
       if (res.data.success && res.data.token) {
         saveSession(res.data.token, res.data.admin);
-        navigate('/admin/dashboard', { replace: true });
+        navigate(getLoginDestination(res.data.admin), { replace: true });
       }
     } catch (err) {
       if (err.response?.data?.pendingApproval) {
@@ -296,7 +300,7 @@ const AdminLogin = () => {
 
       if (res.data.success && res.data.token) {
         saveSession(res.data.token, res.data.admin);
-        navigate('/admin/dashboard', { replace: true });
+        navigate(getLoginDestination(res.data.admin), { replace: true });
       }
     } catch (err) {
       if (err.response?.data?.pendingApproval) {
@@ -333,7 +337,7 @@ const AdminLogin = () => {
 
       if (res.data.success && res.data.token) {
         saveSession(res.data.token, res.data.admin);
-        navigate('/admin/dashboard', { replace: true });
+        navigate(getLoginDestination(res.data.admin), { replace: true });
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Invalid 6-digit Authenticator PIN.');

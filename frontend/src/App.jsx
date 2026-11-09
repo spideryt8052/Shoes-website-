@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { StoreProvider } from './context/StoreContext';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 
 // Layouts
 import PublicLayout from './layouts/PublicLayout';
@@ -33,6 +33,17 @@ import AdminUsersManager from './pages/Admin/AdminUsersManager';
 import RemovalRequestsManager from './pages/Admin/RemovalRequestsManager';
 import SecuritySettings from './pages/Admin/SecuritySettings';
 
+// Helper component: redirects staff to Inventory, and admin/developer to Dashboard
+const RoleIndexRedirect = () => {
+  const { admin } = useAuth();
+  const isMaster =
+    admin?.isMaster ||
+    admin?.role === 'developer' ||
+    ['yaseenbrp25@gmail.com', 'yaseen@newmbshoes.com'].includes(admin?.email?.toLowerCase());
+  const isStaff = !isMaster && admin?.role === 'staff';
+  return <Navigate to={isStaff ? '/admin/inventory' : '/admin/dashboard'} replace />;
+};
+
 function App() {
   return (
     <Router>
@@ -63,22 +74,97 @@ function App() {
                 </ProtectedRoute>
               }
             >
-              <Route index element={<Navigate to="/admin/dashboard" replace />} />
-              <Route path="dashboard" element={<Dashboard />} />
-              <Route path="quick-sell" element={<QuickSell />} />
-              <Route path="sales-ledger" element={<SalesLedger />} />
+              {/* Intelligent role redirect on /admin */}
+              <Route index element={<RoleIndexRedirect />} />
+
+              {/* Staff Allowed Routes: Inventory & Product Add/Edit & Removal Requests */}
+              <Route path="inventory" element={<InventoryManager />} />
               <Route path="products" element={<ManageProducts />} />
               <Route path="add-product" element={<AddEditProduct />} />
               <Route path="edit-product/:id" element={<AddEditProduct />} />
-              <Route path="inventory" element={<InventoryManager />} />
-              <Route path="categories" element={<ManageCategories />} />
-              <Route path="brands" element={<ManageBrands />} />
-              <Route path="stock-history" element={<StockHistoryView />} />
-              <Route path="settings" element={<StoreSettingsView />} />
-              <Route path="reviews" element={<GoogleReviewsManager />} />
-              <Route path="users" element={<AdminUsersManager />} />
               <Route path="removal-requests" element={<RemovalRequestsManager />} />
-              <Route path="security" element={<SecuritySettings />} />
+
+              {/* Admin & Developer Only Routes (Staff is strictly blocked & redirected) */}
+              <Route
+                path="dashboard"
+                element={
+                  <ProtectedRoute allowedRoles={['admin', 'developer']}>
+                    <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="quick-sell"
+                element={
+                  <ProtectedRoute allowedRoles={['admin', 'developer']}>
+                    <QuickSell />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="sales-ledger"
+                element={
+                  <ProtectedRoute allowedRoles={['admin', 'developer']}>
+                    <SalesLedger />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="categories"
+                element={
+                  <ProtectedRoute allowedRoles={['admin', 'developer']}>
+                    <ManageCategories />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="brands"
+                element={
+                  <ProtectedRoute allowedRoles={['admin', 'developer']}>
+                    <ManageBrands />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="stock-history"
+                element={
+                  <ProtectedRoute allowedRoles={['admin', 'developer']}>
+                    <StockHistoryView />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="settings"
+                element={
+                  <ProtectedRoute allowedRoles={['admin', 'developer']}>
+                    <StoreSettingsView />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="reviews"
+                element={
+                  <ProtectedRoute allowedRoles={['admin', 'developer']}>
+                    <GoogleReviewsManager />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="users"
+                element={
+                  <ProtectedRoute allowedRoles={['admin', 'developer']}>
+                    <AdminUsersManager />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="security"
+                element={
+                  <ProtectedRoute allowedRoles={['admin', 'developer']}>
+                    <SecuritySettings />
+                  </ProtectedRoute>
+                }
+              />
             </Route>
 
             {/* Fallback Redirect */}

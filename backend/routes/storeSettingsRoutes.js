@@ -4,10 +4,10 @@ const {
   getStoreSettings,
   updateStoreSettings,
 } = require('../controllers/storeSettingsController');
-const { protect } = require('../middleware/auth');
+const { protect, authorize } = require('../middleware/auth');
 
 router.get('/', getStoreSettings);
-router.put('/', protect, updateStoreSettings);
+router.put('/', protect, authorize('admin', 'developer'), updateStoreSettings);
 
 module.exports = router;
 
