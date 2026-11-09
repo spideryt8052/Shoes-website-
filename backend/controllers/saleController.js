@@ -5,6 +5,7 @@ const StockHistory = require('../models/StockHistory');
 const StoreSettings = require('../models/StoreSettings');
 const { pushToGoogleSheet, GOOGLE_APPS_SCRIPT_TEMPLATE } = require('../services/googleSheetsService');
 const { generateInvoicePDF } = require('../utils/pdfGenerator');
+const { dispatchWhatsAppBill } = require('../services/whatsappService');
 const cache = require('../utils/cache');
 
 // Helper to generate Invoice Number (Prefixed with MB for NEW MB SHOES)
@@ -114,6 +115,13 @@ exports.recordSale = async (req, res, next) => {
     if (settings && settings.googleSheetWebhookUrl && settings.autoSyncGoogleSheet) {
       pushToGoogleSheet(sale).catch((err) =>
         console.error('Auto Google Sheet sync error:', err.message)
+      );
+    }
+
+    // Auto-dispatch WhatsApp PDF bill if customer phone exists
+    if (sale.customerPhone) {
+      dispatchWhatsAppBill(sale).catch((err) =>
+        console.log('[Auto WhatsApp Dispatch]:', err.message)
       );
     }
 
@@ -594,6 +602,28 @@ ${reviewUrl}
       pdfDownloadUrl,
       billText,
       whatsappUrl,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Send automated WhatsApp PDF bill to customer in background
+// @route   POST /api/sales/:id/send-whatsapp
+// @access  Private (Admin / Staff)
+exports.sendWhatsAppBill = async (req, res, next) => {
+  try {
+    const sale = await Sale.findById(req.params.id);
+    if (!sale) {
+      return res.status(404).json({ success: false, message: 'Sale invoice not found' });
+    }
+
+    const result = await dispatchWhatsAppBill(sale);
+
+    res.status(200).json({
+      ...result,
+      invoiceNumber: sale.invoiceNumber,
+      customerPhone: sale.customerPhone,
     });
   } catch (error) {
     next(error);

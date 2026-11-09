@@ -272,40 +272,43 @@ const QuickSell = () => {
   const parsedDiscount = Math.max(0, Number(discount) || 0);
   const totalAmount = Math.max(0, unitPrice * parsedQty - parsedDiscount);
 
-  // 1-Click Send WhatsApp Digital Bill (with direct PDF file sharing & App link)
+  // 1-Click Send WhatsApp Digital Bill (Zero Phone Re-Typing & Background Cloud API Dispatch)
   const sendWhatsAppBill = async (sale) => {
-    const rawPhone = sale.customerPhone || customerPhone;
-    const cleanPhone = rawPhone ? rawPhone.replace(/\D/g, '') : '';
-    const targetPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+    const rawPhone = sale.customerPhone || customerPhone || '';
+    const cleanPhone = rawPhone.replace(/\D/g, '');
+    let targetPhone = cleanPhone;
+    if (cleanPhone.length === 10) {
+      targetPhone = '91' + cleanPhone;
+    } else if (cleanPhone.length === 11 && cleanPhone.startsWith('0')) {
+      targetPhone = '91' + cleanPhone.substring(1);
+    }
+
+    if (!targetPhone) {
+      alert('Kripya customer ka mobile number dalein taaki WhatsApp bill bheja ja sake.');
+      return;
+    }
+
     const billText = formatAiWhatsAppBill(sale, storeSettings, activeBranch);
     const pdfUrl = `https://shoes-website-yaseenbrp25-6387.vercel.app/api/sales/invoice/${sale.invoiceNumber}/pdf`;
 
-    // 1. Try Native Web Share with actual PDF file attachment on mobile / supported devices
-    if (navigator.share && navigator.canShare) {
-      try {
-        const response = await fetch(pdfUrl);
-        if (response.ok) {
-          const blob = await response.blob();
-          const file = new File([blob], `Invoice-${sale.invoiceNumber}.pdf`, { type: 'application/pdf' });
-          if (navigator.canShare({ files: [file] })) {
-            await navigator.share({
-              files: [file],
-              title: `Tax Invoice #${sale.invoiceNumber} - ${storeSettings?.shopName || 'NEW MB SHOES'}`,
-              text: billText,
-            });
-            return;
-          }
-        }
-      } catch (err) {
-        if (err.name !== 'AbortError') {
-          console.log('Native file share error, falling back to WhatsApp link:', err);
-        } else {
+    // 1. Try sending via backend Cloud API / WhatsApp Gateway (Zero UI Opening / 1-Click Background)
+    try {
+      if (sale._id) {
+        const res = await api.post(`/sales/${sale._id}/send-whatsapp`);
+        if (res.data.success && (res.data.mode === 'cloud_api' || res.data.mode === 'gateway')) {
+          alert(`✅ WhatsApp PDF Bill automatically sent directly to customer (+${targetPhone}) in the background!`);
           return;
         }
       }
+    } catch (err) {
+      console.log('Background WhatsApp dispatch not configured, using direct link fallback');
     }
 
-    // 2. Fallback: Automatically download PDF to PC/device & open WhatsApp Web/App
+    // 2. Direct 1-Click WhatsApp Chat (Opens directly to customer number WITHOUT asking for number!)
+    // wa.me/91XXXXXXXXXX opens directly into customer's chat with pre-filled message (NO contact searching!)
+    const waUrl = `https://wa.me/${targetPhone}?text=${encodeURIComponent(billText)}`;
+
+    // Auto-download PDF file to cashier device
     try {
       const link = document.createElement('a');
       link.href = pdfUrl;
@@ -318,8 +321,7 @@ const QuickSell = () => {
       // silent
     }
 
-    const url = `https://api.whatsapp.com/send?phone=${targetPhone}&text=${encodeURIComponent(billText)}`;
-    window.open(url, '_blank');
+    window.open(waUrl, '_blank');
   };
 
   // 1-Click Print Thermal Receipt Slip

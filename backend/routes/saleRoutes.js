@@ -10,6 +10,7 @@ const {
   syncToGoogleSheets,
   getGoogleSheetScript,
   getWhatsAppBill,
+  sendWhatsAppBill,
   downloadInvoicePDF,
 } = require('../controllers/saleController');
 
@@ -23,6 +24,7 @@ router.use(protect);
 router.post('/', recordSale);
 router.post('/bulk', recordBulkSales);
 router.get('/:id/whatsapp-bill', getWhatsAppBill);
+router.post('/:id/send-whatsapp', sendWhatsAppBill);
 
 // Store Financial Ledger & Reports (Admin / Developer only)
 router.get('/', authorize('admin', 'developer'), getSales);
