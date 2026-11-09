@@ -858,11 +858,19 @@ exports.getAdmins = async (req, res, next) => {
   }
 };
 
-// @desc    Create new staff / admin user (Direct creation by Master / Admin is pre-approved)
+// @desc    Create new staff / admin user (Direct creation by Master Developer only is pre-approved)
 // @route   POST /api/auth/users
-// @access  Private (Admin role only)
+// @access  Private (Master Developer only)
 exports.createAdmin = async (req, res, next) => {
   try {
+    const isMasterOperator = isMasterAccount(req.admin) || req.admin?.role === 'developer';
+    if (!isMasterOperator) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: Create Pre-Approved Staff Account ye sirf Master Developer hi kar sakta hai.',
+      });
+    }
+
     const { name, email, password, role } = req.body;
 
     const existing = await Admin.findOne({ email: email.toLowerCase().trim() });
@@ -904,11 +912,19 @@ exports.createAdmin = async (req, res, next) => {
   }
 };
 
-// @desc    Approve a pending admin user (Master Developer / Admin only)
+// @desc    Approve a pending admin user (Master Developer only)
 // @route   PUT /api/auth/users/:id/approve
-// @access  Private (Admin / Developer)
+// @access  Private (Master Developer only)
 exports.approveAdmin = async (req, res, next) => {
   try {
+    const isMasterOperator = isMasterAccount(req.admin) || req.admin?.role === 'developer';
+    if (!isMasterOperator) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: Staff accounts ko approve sirf Master Developer hi kar sakta hai.',
+      });
+    }
+
     const admin = await Admin.findById(req.params.id);
     if (!admin) {
       return res.status(404).json({ success: false, message: 'User account not found' });
@@ -940,11 +956,19 @@ exports.approveAdmin = async (req, res, next) => {
   }
 };
 
-// @desc    Reject / remove a pending registration
+// @desc    Reject / remove a pending registration (Master Developer only)
 // @route   PUT /api/auth/users/:id/reject
-// @access  Private (Admin / Developer)
+// @access  Private (Master Developer only)
 exports.rejectAdmin = async (req, res, next) => {
   try {
+    const isMasterOperator = isMasterAccount(req.admin) || req.admin?.role === 'developer';
+    if (!isMasterOperator) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: Registrations ko reject sirf Master Developer hi kar sakta hai.',
+      });
+    }
+
     const admin = await Admin.findById(req.params.id);
     if (!admin) {
       return res.status(404).json({ success: false, message: 'User account not found' });

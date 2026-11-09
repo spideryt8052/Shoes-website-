@@ -40,6 +40,8 @@ const AdminUsersManager = () => {
     );
   };
 
+  const isDeveloper = isMasterUser(currentAdmin);
+
   const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
@@ -145,6 +147,13 @@ const AdminUsersManager = () => {
     e.preventDefault();
     setMessage({ type: '', text: '' });
 
+    if (!isEditing && !isDeveloper) {
+      return setMessage({
+        type: 'error',
+        text: 'Access denied: Create Pre-Approved Staff Account sirf Master Developer hi kar sakta hai.',
+      });
+    }
+
     if (!formData.name.trim() || !formData.email.trim()) {
       return setMessage({ type: 'error', text: 'Name and email are required.' });
     }
@@ -240,24 +249,30 @@ const AdminUsersManager = () => {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button
-                    type="button"
-                    onClick={() => handleApprove(pu._id, pu.name)}
-                    className="btn btn-sm btn-primary"
-                    style={{ background: '#16a34a', borderColor: '#16a34a', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700 }}
-                  >
-                    <FiCheck /> Approve Login
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleReject(pu._id, pu.name)}
-                    className="btn btn-sm btn-outline"
-                    style={{ color: '#dc2626', borderColor: '#fca5a5', display: 'flex', alignItems: 'center', gap: '4px' }}
-                  >
-                    <FiX /> Reject
-                  </button>
-                </div>
+                {isDeveloper ? (
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      type="button"
+                      onClick={() => handleApprove(pu._id, pu.name)}
+                      className="btn btn-sm btn-primary"
+                      style={{ background: '#16a34a', borderColor: '#16a34a', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700 }}
+                    >
+                      <FiCheck /> Approve Login
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleReject(pu._id, pu.name)}
+                      className="btn btn-sm btn-outline"
+                      style={{ color: '#dc2626', borderColor: '#fca5a5', display: 'flex', alignItems: 'center', gap: '4px' }}
+                    >
+                      <FiX /> Reject
+                    </button>
+                  </div>
+                ) : (
+                  <span style={{ fontSize: '0.8rem', color: '#b45309', background: '#fef3c7', padding: '4px 10px', borderRadius: '6px', fontWeight: 600 }}>
+                    ⏳ Master Developer Approval Required
+                  </span>
+                )}
               </div>
             ))}
           </div>
@@ -346,7 +361,7 @@ const AdminUsersManager = () => {
                             >
                               <FiEdit />
                             </button>
-                            {!isMaster && u._id !== currentAdmin?._id && (
+                            {isDeveloper && !isMaster && u._id !== currentAdmin?._id && (
                               <button
                                 type="button"
                                 className="icon-action-btn delete"
@@ -369,93 +384,132 @@ const AdminUsersManager = () => {
 
         {/* Right: Add/Edit User Form */}
         <div className="form-side-col">
-          <div className="form-card">
-            <h3 className="card-section-title">
-              {isEditing ? `Edit User: ${formData.name}` : 'Create Pre-Approved Staff Account'}
-            </h3>
-            <p className="card-subtitle">
-              Developer ya Master Admin yahan se seedhe staff account bana kar approve kar sakte hain.
-            </p>
+          {isEditing || isDeveloper ? (
+            <div className="form-card">
+              <h3 className="card-section-title">
+                {isEditing ? `Edit User: ${formData.name}` : '👑 Create Pre-Approved Staff Account'}
+              </h3>
+              <p className="card-subtitle">
+                {isEditing
+                  ? 'Update staff details, role or activation status.'
+                  : 'Master Developer yahan se seedhe staff account bana kar approve kar sakte hain.'}
+              </p>
 
-            <form onSubmit={handleSubmit} className="login-form">
-              <div className="form-group">
-                <label>Full Name *</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Counter Staff 1"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Email Address *</label>
-                <input
-                  type="email"
-                  placeholder="staff@newmbshoes.com"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>
-                  Password {isEditing ? '(Leave blank to keep current)' : '*'}
-                </label>
-                <input
-                  type="password"
-                  placeholder="Min 6 characters"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  required={!isEditing}
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Role</label>
-                <select
-                  value={formData.role}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                >
-                  <option value="staff">Billing Staff (POS Quick Sell Only)</option>
-                  <option value="manager">Store Manager (Products, Stock & Sales)</option>
-                  <option value="admin">Administrator (Full Access)</option>
-                </select>
-              </div>
-
-              <div className="checkboxes-stack" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <label className="checkbox-item">
+              <form onSubmit={handleSubmit} className="login-form">
+                <div className="form-group">
+                  <label>Full Name *</label>
                   <input
-                    type="checkbox"
-                    checked={formData.isActive}
-                    onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                    type="text"
+                    placeholder="e.g. Counter Staff 1"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    required
                   />
-                  <span>Account is Active</span>
-                </label>
-                <label className="checkbox-item">
-                  <input
-                    type="checkbox"
-                    checked={formData.isApproved}
-                    onChange={(e) => setFormData({ ...formData, isApproved: e.target.checked })}
-                  />
-                  <span>Approved for Login (Master Authorized)</span>
-                </label>
-              </div>
+                </div>
 
-              <div className="modal-actions" style={{ marginTop: '1rem' }}>
-                {isEditing && (
-                  <button type="button" className="btn btn-outline" onClick={resetForm}>
-                    Cancel
+                <div className="form-group">
+                  <label>Email Address *</label>
+                  <input
+                    type="email"
+                    placeholder="staff@newmbshoes.com"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>
+                    Password {isEditing ? '(Leave blank to keep current)' : '*'}
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="Min 6 characters"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    required={!isEditing}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Role</label>
+                  <select
+                    value={formData.role}
+                    onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                  >
+                    <option value="staff">Billing Staff (POS Quick Sell Only)</option>
+                    <option value="manager">Store Manager (Products, Stock & Sales)</option>
+                    <option value="admin">Administrator (Full Access)</option>
+                  </select>
+                </div>
+
+                <div className="checkboxes-stack" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label className="checkbox-item">
+                    <input
+                      type="checkbox"
+                      checked={formData.isActive}
+                      onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                    />
+                    <span>Account is Active</span>
+                  </label>
+                  <label className="checkbox-item">
+                    <input
+                      type="checkbox"
+                      checked={formData.isApproved}
+                      onChange={(e) => setFormData({ ...formData, isApproved: e.target.checked })}
+                    />
+                    <span>Approved for Login (Master Authorized)</span>
+                  </label>
+                </div>
+
+                <div className="modal-actions" style={{ marginTop: '1rem' }}>
+                  {isEditing && (
+                    <button type="button" className="btn btn-outline" onClick={resetForm}>
+                      Cancel
+                    </button>
+                  )}
+                  <button type="submit" className="btn btn-primary">
+                    {isEditing ? 'Save Changes' : 'Create & Approve Account'}
                   </button>
-                )}
-                <button type="submit" className="btn btn-primary">
-                  {isEditing ? 'Save Changes' : 'Create & Approve Account'}
-                </button>
+                </div>
+              </form>
+            </div>
+          ) : (
+            <div
+              className="form-card"
+              style={{
+                textAlign: 'center',
+                padding: '36px 20px',
+                background: '#f8fafc',
+                border: '1.5px dashed #cbd5e1',
+                borderRadius: '12px',
+              }}
+            >
+              <div
+                style={{
+                  width: '56px',
+                  height: '56px',
+                  borderRadius: '50%',
+                  background: '#fef3c7',
+                  color: '#b45309',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 16px',
+                  fontSize: '24px',
+                }}
+              >
+                <FiShield />
               </div>
-            </form>
-          </div>
+              <h3 style={{ margin: '0 0 8px', fontSize: '1.1rem', fontWeight: 700, color: '#0f172a' }}>
+                Master Developer Only
+              </h3>
+              <p style={{ margin: 0, fontSize: '0.88rem', color: '#64748b', lineHeight: 1.5 }}>
+                Create Pre-Approved Staff Account ye bss <strong>Master Developer</strong> hee kar sakta hai.
+                Naye staff members signup page se register kar sakte hain, aur unhe approve bhi Master Developer hi karega.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>
