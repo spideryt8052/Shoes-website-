@@ -33,10 +33,8 @@ const AdminLogin = () => {
   // Login Mode: 'PASSWORD' (ID & Password) or 'OTP' (Email OTP)
   const [loginMode, setLoginMode] = useState('PASSWORD');
 
-  // ID & Password State
-  const [email, setEmail] = useState(() => {
-    return localStorage.getItem('last_admin_email') || '';
-  });
+  // ID & Password State (always blank on initial load, no pre-fill)
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
@@ -60,6 +58,15 @@ const AdminLogin = () => {
   const [successMsg, setSuccessMsg] = useState('');
   const [isPendingApproval, setIsPendingApproval] = useState(false);
 
+  // Clear any legacy saved admin email on mount so fields are clean
+  useEffect(() => {
+    try {
+      localStorage.removeItem('last_admin_email');
+    } catch (e) {
+      // ignore
+    }
+  }, []);
+
   // Check URL query parameters for session expired notices
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -75,15 +82,6 @@ const AdminLogin = () => {
       return () => clearTimeout(timer);
     }
   }, [otpCooldown]);
-
-  // Persist email to localStorage
-  const rememberEmail = (mail) => {
-    try {
-      if (mail) localStorage.setItem('last_admin_email', mail);
-    } catch (e) {
-      // ignore
-    }
-  };
 
   // ==============================================================
   // METHOD 1: ID & PASSWORD LOGIN
@@ -104,8 +102,6 @@ const AdminLogin = () => {
       setError('Please enter your account password.');
       return;
     }
-
-    rememberEmail(cleanEmail);
 
     try {
       setLoading(true);
@@ -156,8 +152,6 @@ const AdminLogin = () => {
       setError('Please enter your admin email address.');
       return;
     }
-
-    rememberEmail(cleanEmail);
 
     try {
       setLoading(true);
@@ -238,8 +232,7 @@ const AdminLogin = () => {
     setError('');
     setSuccessMsg('');
     setIsPendingApproval(false);
-    const current = (email || localStorage.getItem('last_admin_email') || '').trim();
-    setGoogleEmailInput(current);
+    setGoogleEmailInput('');
     setGoogleModalOpen(true);
   };
 
@@ -253,7 +246,6 @@ const AdminLogin = () => {
     setGoogleModalOpen(false);
     setEmail(targetEmail);
     setLoginMode('OTP');
-    rememberEmail(targetEmail);
 
     // Trigger OTP sending
     try {
@@ -458,7 +450,7 @@ const AdminLogin = () => {
 
             {/* TAB 1: ID & PASSWORD LOGIN */}
             {loginMode === 'PASSWORD' && (
-              <form onSubmit={handlePasswordLogin} className="login-form">
+              <form onSubmit={handlePasswordLogin} className="login-form" autoComplete="off">
                 <div className="form-group">
                   <label htmlFor="admin-email">Admin Email (ID)</label>
                   <div className="input-with-icon">
@@ -487,6 +479,7 @@ const AdminLogin = () => {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Enter your account password"
+                      autoComplete="current-password"
                       required
                     />
                     <button
@@ -524,7 +517,7 @@ const AdminLogin = () => {
             {loginMode === 'OTP' && (
               <>
                 {!emailOtpSent ? (
-                  <form onSubmit={handleSendEmailOtp} className="login-form">
+                  <form onSubmit={handleSendEmailOtp} className="login-form" autoComplete="off">
                     <div className="form-group">
                       <label htmlFor="admin-otp-email">Admin Email Address (Gmail)</label>
                       <div className="input-with-icon">
@@ -550,7 +543,7 @@ const AdminLogin = () => {
                     </button>
                   </form>
                 ) : (
-                  <form onSubmit={handleVerifyEmailOtp} className="login-form">
+                  <form onSubmit={handleVerifyEmailOtp} className="login-form" autoComplete="off">
                     <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.65rem 0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
                       <span>OTP Sent to: <strong style={{ color: '#0f172a' }}>{email}</strong></span>
                       <button
@@ -675,7 +668,7 @@ const AdminLogin = () => {
               Apna registered Google (Gmail) account enter karein. Login ke liye 6-digit OTP aapke Gmail par aayega:
             </p>
 
-            <form onSubmit={handleGoogleModalSubmit}>
+            <form onSubmit={handleGoogleModalSubmit} autoComplete="off">
               <div className="form-group">
                 <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Google Email Address</label>
                 <div className="input-with-icon">
@@ -684,7 +677,8 @@ const AdminLogin = () => {
                     type="email"
                     value={googleEmailInput}
                     onChange={(e) => setGoogleEmailInput(e.target.value)}
-                    placeholder="name@gmail.com"
+                    placeholder="e.g. yaseenbrp25@gmail.com"
+                    autoComplete="off"
                     autoFocus
                     required
                   />
