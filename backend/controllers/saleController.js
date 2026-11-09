@@ -551,41 +551,36 @@ exports.getWhatsAppBill = async (req, res, next) => {
       ? `Dear *${sale.customerName}*,`
       : 'Dear Customer,';
 
+    const appUrl = 'https://shoes-website-yaseenbrp25-6387.vercel.app';
     const pdfDownloadUrl = `https://shoes-website-yaseenbrp25-6387.vercel.app/api/sales/invoice/${sale.invoiceNumber}/pdf`;
 
     const billText = `🏪 *${storeName.toUpperCase()}*
 📍 _${storeAddress}_
 📞 Showroom Helpline: ${contactNo}
-─────────────────────
-🧾 *DIGITAL TAX INVOICE & RECEIPT*
+───────────────────────
+🧾 *TAX INVOICE & DIGITAL RECEIPT*
 Invoice: *#${sale.invoiceNumber}*
 Date: ${dateFormatted} | ${timeFormatted}
-Cashier: ${sale.adminName || 'Counter POS'}
-─────────────────────
+Customer: *${sale.customerName || 'Walk-in Customer'}*
+Paid Amount: *₹${sale.totalAmount.toLocaleString('en-IN')}* (${sale.paymentMethod || 'UPI / Cash'})
+───────────────────────
 ${customerGreeting}
-Thank you for visiting *NEW MB SHOES Bhagalpur*! Here is your official e-bill & PDF receipt:
+Aapka official PDF Tax Invoice bill generate ho gaya hai:
 
-👟 *PURCHASED ITEM*:
-• *${sale.productName}*
-  Brand: *${sale.brandName}*
-  Size: *UK ${sale.size}* | Color: *${sale.color}*
-  Quantity: *${sale.quantity} Pair(s)*
-  Rate: ₹${sale.sellingPrice.toLocaleString('en-IN')}
-${sale.discount > 0 ? `  Discount: -₹${sale.discount.toLocaleString('en-IN')}\n` : ''}
-💰 *TOTAL AMOUNT PAID: ₹${sale.totalAmount.toLocaleString('en-IN')}*
-💳 Payment Method: *${sale.paymentMethod}*
-─────────────────────
-📄 *DOWNLOAD OFFICIAL PDF BILL & TAX INVOICE*:
+📄 *DOWNLOAD OFFICIAL PDF BILL*:
 ${pdfDownloadUrl}
-─────────────────────
-🛡️ *7-DAY SIZE EXCHANGE POLICY*:
-• Fit/size exchange is available within 7 days at any of our 3 Bhagalpur branches (Shah Market, Tatarpur, Tilkamanjhi) with this PDF bill.
-• Shoes must be unworn and in original box packaging.
 
-⭐ *How was your showroom trial experience? Review us on Google*:
+🛍️ *OUR SHOE STORE WEBSITE & APP*:
+${appUrl}
+(Naye branded joote aur fresh footwear dekhne ke liye app link open karein)
+───────────────────────
+🛡️ *7-DAY SIZE EXCHANGE POLICY*:
+• Fit/size exchange is available within 7 days across our Bhagalpur branches with this PDF bill.
+
+⭐ *Rate your trial experience on Google*:
 ${reviewUrl}
 
-✨ *Visit NEW MB SHOES again for fresh branded footwear arrivals!*`;
+✨ *Thank you for shopping at ${storeName.toUpperCase()}!*`;
 
     const cleanPhone = sale.customerPhone ? sale.customerPhone.replace(/\D/g, '') : '';
     const formattedPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;

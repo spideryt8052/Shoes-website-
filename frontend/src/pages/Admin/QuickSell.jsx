@@ -61,47 +61,44 @@ export const formatAiWhatsAppBill = (sale, storeSettings, activeBranch) => {
   const contactNo = sale.storePhone || activeBranch?.phone || storeSettings?.contactNumber || '+91 94312 14500';
   const reviewUrl = storeSettings?.googleReviewUrl || 'https://maps.app.goo.gl/vF32PqqHXmZ6mKTx6';
 
+  const appUrl = 'https://shoes-website-yaseenbrp25-6387.vercel.app';
+  const pdfDownloadUrl = `https://shoes-website-yaseenbrp25-6387.vercel.app/api/sales/invoice/${sale.invoiceNumber}/pdf`;
+
   const saleDate = new Date(sale.saleDate || Date.now());
   const dateStr = saleDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
   const timeStr = saleDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 
   const greeting = sale.customerName && sale.customerName !== 'Walk-in Customer'
     ? `Dear *${sale.customerName}*,`
-    : 'Dear Valued Customer,';
+    : 'Dear Customer,';
 
   return `🏪 *${storeName.toUpperCase()}*
 📍 _${storeAddress}_
 📞 Showroom Helpline: ${contactNo}
 ───────────────────────
-🧾 *OFFICIAL DIGITAL INVOICE & RECEIPT*
-Invoice No: *#${sale.invoiceNumber}*
+🧾 *TAX INVOICE & DIGITAL RECEIPT*
+Invoice: *#${sale.invoiceNumber}*
 Date: ${dateStr} | Time: ${timeStr}
-Cashier: ${sale.adminName || 'Counter POS'}
+Customer: *${sale.customerName || 'Walk-in Customer'}*
+Paid Amount: *₹${Number(sale.totalAmount).toLocaleString('en-IN')}* (${sale.paymentMethod || 'UPI / Cash'})
 ───────────────────────
 ${greeting}
-Thank you for visiting *NEW MB SHOES Bhagalpur*! Here is your verified digital bill:
+Aapka official PDF Tax Invoice bill generate ho gaya hai:
 
-👟 *PURCHASED ITEM*:
-• *${sale.productName}*
-  Brand: *${sale.brandName}*
-  Size: *UK ${sale.size}* | Color: *${sale.color}*
-  Quantity: *${sale.quantity} Pair(s)*
-  Rate: ₹${Number(sale.sellingPrice).toLocaleString('en-IN')}
-${sale.discount > 0 ? `  Showroom Discount: -₹${Number(sale.discount).toLocaleString('en-IN')}\n` : ''}
-💰 *TOTAL AMOUNT PAID: ₹${Number(sale.totalAmount).toLocaleString('en-IN')}*
-💳 Payment Method: *${sale.paymentMethod}*
-───────────────────────
-📄 *DOWNLOAD OFFICIAL PDF BILL & TAX INVOICE*:
-https://shoes-website-yaseenbrp25-6387.vercel.app/api/sales/invoice/${sale.invoiceNumber}/pdf
+📄 *DOWNLOAD OFFICIAL PDF BILL*:
+${pdfDownloadUrl}
+
+🛍️ *OUR SHOE STORE WEBSITE & APP*:
+${appUrl}
+(Naye branded joote aur fresh arrivals dekhne ke liye app link open karein)
 ───────────────────────
 🛡️ *7-DAY SIZE EXCHANGE POLICY*:
-• Fit/size exchange is available within 7 days across our 3 Bhagalpur branches (Shah Market, Tatarpur, Tilkamanjhi) with this WhatsApp bill.
-• Shoes must be unworn and in original box packaging.
+• Fit/size exchange is available within 7 days across our Bhagalpur branches with this PDF bill.
 
-⭐ *Rate your in-store trial experience*:
+⭐ *Rate your trial experience on Google*:
 ${reviewUrl}
 
-✨ *Visit NEW MB SHOES again for fresh branded footwear arrivals!* ✨`;
+✨ *Thank you for shopping at ${storeName.toUpperCase()}!*`;
 };
 
 const QuickSell = () => {
@@ -275,12 +272,52 @@ const QuickSell = () => {
   const parsedDiscount = Math.max(0, Number(discount) || 0);
   const totalAmount = Math.max(0, unitPrice * parsedQty - parsedDiscount);
 
-  // 1-Click Send WhatsApp Digital Bill
-  const sendWhatsAppBill = (sale) => {
+  // 1-Click Send WhatsApp Digital Bill (with direct PDF file sharing & App link)
+  const sendWhatsAppBill = async (sale) => {
     const rawPhone = sale.customerPhone || customerPhone;
     const cleanPhone = rawPhone ? rawPhone.replace(/\D/g, '') : '';
     const targetPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
     const billText = formatAiWhatsAppBill(sale, storeSettings, activeBranch);
+    const pdfUrl = `https://shoes-website-yaseenbrp25-6387.vercel.app/api/sales/invoice/${sale.invoiceNumber}/pdf`;
+
+    // 1. Try Native Web Share with actual PDF file attachment on mobile / supported devices
+    if (navigator.share && navigator.canShare) {
+      try {
+        const response = await fetch(pdfUrl);
+        if (response.ok) {
+          const blob = await response.blob();
+          const file = new File([blob], `Invoice-${sale.invoiceNumber}.pdf`, { type: 'application/pdf' });
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              files: [file],
+              title: `Tax Invoice #${sale.invoiceNumber} - ${storeSettings?.shopName || 'NEW MB SHOES'}`,
+              text: billText,
+            });
+            return;
+          }
+        }
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          console.log('Native file share error, falling back to WhatsApp link:', err);
+        } else {
+          return;
+        }
+      }
+    }
+
+    // 2. Fallback: Automatically download PDF to PC/device & open WhatsApp Web/App
+    try {
+      const link = document.createElement('a');
+      link.href = pdfUrl;
+      link.download = `Invoice-${sale.invoiceNumber}.pdf`;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (e) {
+      // silent
+    }
+
     const url = `https://api.whatsapp.com/send?phone=${targetPhone}&text=${encodeURIComponent(billText)}`;
     window.open(url, '_blank');
   };
