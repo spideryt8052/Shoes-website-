@@ -12,10 +12,14 @@ import {
   FiShield,
   FiCheckCircle,
   FiAlertCircle,
-  FiCopy,
-  FiCheck,
   FiHome,
   FiUserPlus,
+  FiArrowRight,
+  FiRefreshCw,
+  FiClock,
+  FiEdit2,
+  FiEye,
+  FiEyeOff,
 } from 'react-icons/fi';
 
 const AdminSignup = () => {
@@ -29,33 +33,41 @@ const AdminSignup = () => {
     }
   }, [isAuthenticated, navigate]);
 
-  // Clean 2-Phase State:
-  // 'REGISTER'   -> Step 1: Name, Email, Password, Branch & Role
-  // 'SETUP_2FA'  -> Step 2: Scan QR Code & Enter First 6-Digit PIN to activate
-  const [phase, setPhase] = useState('REGISTER');
+  // 3 Clear Phases:
+  // 'FORM'             -> Step 1: User fills Name, Email, Password, Branch, Role
+  // 'VERIFY_OTP'       -> Step 2: Enters 6-Digit OTP sent to their Gmail
+  // 'PENDING_APPROVAL' -> Step 3: Confirmation that request is pending Master Developer approval
+  const [phase, setPhase] = useState('FORM');
 
   // Step 1 Form Data
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [showroomBranch, setShowroomBranch] = useState('Shah Market (Main Flagship)');
-  const [role, setRole] = useState('admin');
+  const [role, setRole] = useState('staff');
   const [inviteCode, setInviteCode] = useState('');
 
-  // Step 2 2FA Data
-  const [tempToken, setTempToken] = useState('');
-  const [setupData, setSetupData] = useState({ secret: '', qrCodeUrl: '' });
-  const [totpCode, setTotpCode] = useState('');
-  const [copiedKey, setCopiedKey] = useState(false);
+  // Step 2 OTP Data
+  const [otp, setOtp] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   // Status
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  // Handle Step 1: Submit Registration
-  const handleRegister = async (e) => {
+  // Timer countdown for OTP resend
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown((prev) => prev - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
+
+  // Step 1 Handler: Validates details and dispatches 6-digit OTP to user's email
+  const handleRequestOtp = async (e) => {
     e.preventDefault();
     setError('');
     setSuccessMsg('');
@@ -65,8 +77,9 @@ const AdminSignup = () => {
       return;
     }
 
-    if (!email.trim()) {
-      setError('Please enter your email address.');
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      setError('Please enter a valid email address.');
       return;
     }
 
@@ -76,7 +89,61 @@ const AdminSignup = () => {
     }
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match. Please re-enter.');
+      setError('Passwords do not match. Please re-enter your password.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const res = await api.post('/auth/send-signup-otp', { email: cleanEmail });
+
+      if (res.data.success) {
+        setPhase('VERIFY_OTP');
+        setOtp('');
+        setResendCooldown(60);
+        setSuccessMsg(
+          res.data.message || `A 6-digit OTP code has been sent to ${cleanEmail}. Please check your Gmail.`
+        );
+      }
+    } catch (err) {
+      setError(
+        err.response?.data?.message || 'Failed to send OTP to email. Please check your email address and try again.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Resend OTP handler for Step 2
+  const handleResendOtp = async () => {
+    if (resendCooldown > 0) return;
+    setError('');
+    setSuccessMsg('');
+
+    const cleanEmail = email.trim().toLowerCase();
+    try {
+      setLoading(true);
+      const res = await api.post('/auth/send-signup-otp', { email: cleanEmail });
+      if (res.data.success) {
+        setResendCooldown(60);
+        setSuccessMsg(`New 6-digit OTP code sent to ${cleanEmail}. Please check your Gmail.`);
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to resend OTP. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Step 2 Handler: Verifies Email OTP and creates account request for Master Developer
+  const handleVerifyOtpAndRegister = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccessMsg('');
+
+    const cleanOtp = String(otp || '').trim();
+    if (!cleanOtp || cleanOtp.length !== 6) {
+      setError('Please enter the 6-digit verification code sent to your email.');
       return;
     }
 
@@ -88,70 +155,30 @@ const AdminSignup = () => {
         password,
         role,
         inviteCode: inviteCode.trim() || '123456',
+        otp: cleanOtp,
       });
 
+      // Master Developer auto-logs in
       if (res.data.success && res.data.token) {
         saveSession(res.data.token, res.data.admin);
         navigate('/admin/dashboard', { replace: true });
         return;
-      } else if (res.data.success && res.data.pendingApproval) {
+      }
+
+      // Standard users go to Pending Approval phase
+      if (res.data.success && res.data.pendingApproval) {
         setPhase('PENDING_APPROVAL');
-        setSuccessMsg(res.data.message || 'Registration submitted! Master Developer ke approval ke baad login khulega.');
+        setSuccessMsg(
+          res.data.message || 'Email verified & registration request submitted! Master Developer ke approve karne ke baad aap login kar sakenge.'
+        );
         return;
-      } else if (res.data.success && res.data.require2FA) {
-        setTempToken(res.data.tempToken);
-        setSetupData({
-          secret: res.data.secret || '',
-          qrCodeUrl: res.data.qrCodeUrl || '',
-        });
-        setSuccessMsg('Account created! Now scan the QR code to link Google Authenticator:');
-        setPhase('SETUP_2FA');
       }
     } catch (err) {
       setError(
-        err.response?.data?.message || 'Registration failed. Please check details and try again.'
+        err.response?.data?.message || 'Invalid or expired OTP code. Please enter the correct code or request a new one.'
       );
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Handle Step 2: Verify Initial 6-Digit PIN -> Final Dashboard Access
-  const handleVerifyInitial2FA = async (e) => {
-    e.preventDefault();
-    setError('');
-
-    if (!totpCode || totpCode.trim().length !== 6) {
-      setError('Please enter the 6-digit PIN from Google Authenticator.');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const res = await api.post('/auth/verify-2fa', {
-        tempToken,
-        totpCode: totpCode.trim(),
-      });
-
-      if (res.data.success && res.data.token) {
-        saveSession(res.data.token, res.data.admin);
-        navigate('/admin/dashboard', { replace: true });
-      }
-    } catch (err) {
-      setError(
-        err.response?.data?.message ||
-          'Invalid 6-digit PIN. Please verify code in Google Authenticator.'
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const copySecret = () => {
-    if (setupData.secret) {
-      navigator.clipboard.writeText(setupData.secret);
-      setCopiedKey(true);
-      setTimeout(() => setCopiedKey(false), 2000);
     }
   };
 
@@ -161,13 +188,15 @@ const AdminSignup = () => {
         {/* Header */}
         <div className="login-header">
           <div className="shield-icon-wrap" style={{ background: '#0f172a' }}>
-            {phase === 'REGISTER' ? <FiUserPlus size={28} /> : <FiShield size={28} />}
+            {phase === 'FORM' && <FiUserPlus size={28} />}
+            {phase === 'VERIFY_OTP' && <FiMail size={28} />}
+            {phase === 'PENDING_APPROVAL' && <FiClock size={28} />}
           </div>
           <h2>NEW MB SHOES</h2>
           <p>
-            {phase === 'REGISTER'
-              ? 'Authorized Staff & Admin Registration'
-              : 'Link Google Authenticator (Step 2 Security)'}
+            {phase === 'FORM' && 'Staff & Admin Registration (Step 1 of 2)'}
+            {phase === 'VERIFY_OTP' && 'Verify Email Address (Step 2 of 2)'}
+            {phase === 'PENDING_APPROVAL' && 'Master Developer Approval Pending'}
           </p>
         </div>
 
@@ -187,11 +216,11 @@ const AdminSignup = () => {
         )}
 
         {/* ============================================================== */}
-        {/* PHASE 1: REGISTRATION FORM                                    */}
+        {/* PHASE 1: REGISTRATION DETAILS FORM                             */}
         {/* ============================================================== */}
-        {phase === 'REGISTER' && (
+        {phase === 'FORM' && (
           <>
-            <form onSubmit={handleRegister} className="login-form">
+            <form onSubmit={handleRequestOtp} className="login-form">
               {/* Full Name */}
               <div className="form-group">
                 <label htmlFor="admin-name">Full Name</label>
@@ -202,7 +231,7 @@ const AdminSignup = () => {
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Yaseen Jamshed / Store Manager"
+                    placeholder="e.g. Rahul Kumar / Store Manager"
                     required
                   />
                 </div>
@@ -210,7 +239,7 @@ const AdminSignup = () => {
 
               {/* Email Address */}
               <div className="form-group">
-                <label htmlFor="admin-email">Email Address</label>
+                <label htmlFor="admin-email">Email Address (Gmail)</label>
                 <div className="input-with-icon">
                   <FiMail className="input-icon" />
                   <input
@@ -218,10 +247,13 @@ const AdminSignup = () => {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="name@newmbshoes.com or your email"
+                    placeholder="Enter your Gmail ID for OTP verification"
                     required
                   />
                 </div>
+                <small style={{ color: '#64748b', fontSize: '0.78rem', marginTop: '0.25rem', display: 'block' }}>
+                  Is email par 6-digit verification OTP aayega.
+                </small>
               </div>
 
               {/* Showroom Branch */}
@@ -270,26 +302,43 @@ const AdminSignup = () => {
                     fontSize: '0.9rem',
                   }}
                 >
-                  <option value="admin">Store Owner / Full Admin (All Permissions)</option>
-                  <option value="manager">Showroom Manager (Stock, POS, Settings)</option>
-                  <option value="staff">Billing Staff (Counter POS Quick Sell Only)</option>
+                  <option value="staff">Billing Staff (Counter POS Quick Sell)</option>
+                  <option value="manager">Showroom Manager (Stock, POS, Reports)</option>
+                  <option value="admin">Store Admin (Full Management Access)</option>
                 </select>
               </div>
 
               {/* Password */}
               <div className="form-group">
                 <label htmlFor="admin-password">Password (Minimum 6 characters)</label>
-                <div className="input-with-icon">
+                <div className="input-with-icon" style={{ position: 'relative' }}>
                   <FiLock className="input-icon" />
                   <input
                     id="admin-password"
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Create secure password"
                     minLength={6}
                     required
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{
+                      position: 'absolute',
+                      right: '10px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      color: '#64748b',
+                      cursor: 'pointer',
+                      padding: '4px',
+                    }}
+                  >
+                    {showPassword ? <FiEyeOff size={16} /> : <FiEye size={16} />}
+                  </button>
                 </div>
               </div>
 
@@ -300,7 +349,7 @@ const AdminSignup = () => {
                   <FiLock className="input-icon" />
                   <input
                     id="admin-confirm-password"
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Re-enter password"
@@ -320,7 +369,7 @@ const AdminSignup = () => {
                     type="password"
                     value={inviteCode}
                     onChange={(e) => setInviteCode(e.target.value)}
-                    placeholder="Optional (or enter passcode)"
+                    placeholder="Optional (leave blank or enter 123456)"
                   />
                 </div>
               </div>
@@ -330,7 +379,7 @@ const AdminSignup = () => {
                 className="btn btn-primary btn-block btn-lg login-submit-btn"
                 disabled={loading}
               >
-                {loading ? 'Creating Account...' : 'Create Account & Enter Dashboard →'}
+                {loading ? 'Sending Verification OTP...' : 'Send Verification OTP to Email →'}
               </button>
             </form>
 
@@ -347,62 +396,39 @@ const AdminSignup = () => {
         )}
 
         {/* ============================================================== */}
-        {/* PHASE 2: INITIAL 2FA SETUP (SCAN QR CODE & CONFIRM PIN)        */}
+        {/* PHASE 2: VERIFY EMAIL OTP                                     */}
         {/* ============================================================== */}
-        {phase === 'SETUP_2FA' && (
+        {phase === 'VERIFY_OTP' && (
           <div className="two-factor-wrap">
-            <div className="two-factor-banner">
-              <FiCheckCircle size={20} />
-              <span>Account Created: {email}</span>
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.85rem 1rem', marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: '0.78rem', color: '#64748b' }}>OTP Sent To Email:</div>
+                <strong style={{ fontSize: '0.92rem', color: '#0f172a' }}>{email}</strong>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setPhase('FORM'); setError(''); }}
+                className="btn btn-outline"
+                style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+              >
+                <FiEdit2 size={13} /> Edit
+              </button>
             </div>
 
-            <div className="qr-code-box">
-              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a' }}>
-                📱 Scan with Google Authenticator App:
-              </div>
+            <p style={{ fontSize: '0.88rem', color: '#475569', lineHeight: 1.5, marginBottom: '1.25rem' }}>
+              Aapke email address par 6-digit ka verification code bheja gaya hai. Kripya code enter karein taaki aapki request Master Developer ke paas approval ke liye submit ho sake.
+            </p>
 
-              {setupData.qrCodeUrl && (
-                <img
-                  src={setupData.qrCodeUrl}
-                  alt="Google Authenticator QR Code"
-                  className="qr-code-img"
-                />
-              )}
-
-              <div className="manual-key-row">
-                <span>Secret Key:</span>
-                <span className="manual-key-text">{setupData.secret}</span>
-                <button
-                  type="button"
-                  onClick={copySecret}
-                  className="btn btn-outline"
-                  style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }}
-                  title="Copy Secret Key"
-                >
-                  {copiedKey ? <FiCheck color="#16a34a" /> : <FiCopy />}
-                </button>
-              </div>
-
-              <div style={{ fontSize: '0.8rem', color: '#475569', textAlign: 'left', width: '100%', lineHeight: '1.4' }}>
-                <strong>Easy 3 steps on your phone:</strong>
-                <ol style={{ paddingLeft: '1.2rem', margin: '0.4rem 0 0 0' }}>
-                  <li>Open <strong>Google Authenticator</strong> on your phone.</li>
-                  <li>Tap <strong>+</strong> ➔ <strong>Scan a QR code</strong>.</li>
-                  <li>Scan the QR code above and enter the 6-digit PIN below.</li>
-                </ol>
-              </div>
-            </div>
-
-            <form onSubmit={handleVerifyInitial2FA} className="login-form">
+            <form onSubmit={handleVerifyOtpAndRegister} className="login-form">
               <div className="form-group">
-                <label style={{ textAlign: 'center', fontWeight: 700 }}>
-                  Enter 6-Digit PIN from your phone app:
+                <label style={{ textAlign: 'center', fontWeight: 700, fontSize: '0.95rem' }}>
+                  Enter 6-Digit Email OTP:
                 </label>
                 <input
                   type="text"
                   maxLength="6"
-                  value={totpCode}
-                  onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ''))}
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
                   placeholder="000000"
                   className="pin-input-big"
                   autoFocus
@@ -413,18 +439,36 @@ const AdminSignup = () => {
               <button
                 type="submit"
                 className="btn btn-primary btn-block btn-lg"
-                disabled={loading || totpCode.length !== 6}
+                disabled={loading || otp.length !== 6}
               >
-                {loading ? 'Activating Account...' : 'Activate Account & Enter Dashboard 🚀'}
+                {loading ? 'Verifying OTP & Submitting...' : 'Verify OTP & Submit Request →'}
               </button>
+
+              <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+                <button
+                  type="button"
+                  onClick={handleResendOtp}
+                  disabled={loading || resendCooldown > 0}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: resendCooldown > 0 ? '#94a3b8' : '#2563eb',
+                    fontSize: '0.88rem',
+                    cursor: resendCooldown > 0 ? 'default' : 'pointer',
+                    fontWeight: 600,
+                  }}
+                >
+                  {resendCooldown > 0 ? `Resend OTP in ${resendCooldown}s` : 'Didn’t receive code? Resend OTP'}
+                </button>
+              </div>
 
               <button
                 type="button"
-                onClick={() => setPhase('REGISTER')}
+                onClick={() => setPhase('FORM')}
                 className="btn btn-outline btn-block"
-                style={{ marginTop: '0.4rem' }}
+                style={{ marginTop: '0.75rem' }}
               >
-                ← Back to registration details
+                ← Back to registration form
               </button>
             </form>
           </div>
@@ -434,23 +478,35 @@ const AdminSignup = () => {
         {/* PHASE 3: PENDING MASTER DEVELOPER APPROVAL                     */}
         {/* ============================================================== */}
         {phase === 'PENDING_APPROVAL' && (
-          <div className="two-factor-wrap" style={{ textAlign: 'center', padding: '1rem 0' }}>
+          <div className="two-factor-wrap" style={{ textAlign: 'center', padding: '0.5rem 0' }}>
             <div style={{ fontSize: '3.5rem', marginBottom: '0.8rem' }}>⏳</div>
-            <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.5rem' }}>
-              Registration Submitted!
+            <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.35rem' }}>
+              Registration Request Submitted!
             </h3>
-            <p style={{ fontSize: '0.92rem', color: '#475569', lineHeight: 1.5, marginBottom: '1.5rem' }}>
-              Aapka account create ho gaya hai. Security policy ke tehat, showroom portal me login karne ke liye <strong>Developer / Master Admin</strong> ka approval anivarya hai.
+            <p style={{ fontSize: '0.85rem', color: '#16a34a', fontWeight: 700, marginBottom: '1rem' }}>
+              ✅ Email OTP Verified Successfully
             </p>
 
-            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '1rem', textAlign: 'left', marginBottom: '1.5rem', fontSize: '0.88rem' }}>
+            <p style={{ fontSize: '0.9rem', color: '#475569', lineHeight: 1.5, marginBottom: '1.25rem' }}>
+              Aapka email verify ho chuka hai. Showroom portal ki security ke tehat, naye accounts ke liye <strong>Master Developer (Developer)</strong> ka approval anivarya hai.
+            </p>
+
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '1rem', textAlign: 'left', marginBottom: '1.25rem', fontSize: '0.88rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #edf2f7' }}>
                 <span style={{ color: '#64748b' }}>Staff Name:</span>
                 <strong>{name}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #edf2f7' }}>
-                <span style={{ color: '#64748b' }}>Staff Email:</span>
+                <span style={{ color: '#64748b' }}>Email ID:</span>
                 <strong>{email}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #edf2f7' }}>
+                <span style={{ color: '#64748b' }}>Branch:</span>
+                <span>{showroomBranch}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #edf2f7' }}>
+                <span style={{ color: '#64748b' }}>Role:</span>
+                <span style={{ textTransform: 'capitalize', fontWeight: 600 }}>{role}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
                 <span style={{ color: '#64748b' }}>Account Status:</span>
@@ -460,12 +516,16 @@ const AdminSignup = () => {
               </div>
             </div>
 
-            <p style={{ fontSize: '0.82rem', color: '#64748b', marginBottom: '1.2rem' }}>
-              Master Developer ke approve karte hi aap apne isi email aur password/OTP se login kar sakenge.
-            </p>
+            <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '0.75rem', marginBottom: '1.5rem', textAlign: 'left', fontSize: '0.84rem', color: '#1e40af' }}>
+              💡 <strong>Login Process:</strong> Master Developer ke approve karte hi aap apne isi <strong>Email (ID)</strong> aur <strong>Password</strong> se sidha login kar sakenge.
+            </div>
 
-            <Link to="/admin/login" className="btn btn-primary btn-block btn-lg" style={{ textDecoration: 'none', display: 'block' }}>
-              ← Return to Admin Login
+            <Link
+              to="/admin/login"
+              className="btn btn-primary btn-block btn-lg"
+              style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+            >
+              Go to Admin Login <FiArrowRight />
             </Link>
           </div>
         )}

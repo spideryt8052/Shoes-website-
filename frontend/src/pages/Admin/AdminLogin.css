@@ -94,6 +94,12 @@
   margin-bottom: 1.25rem;
 }
 
+.login-error-alert.approval-pending-alert {
+  background-color: #fffbeb;
+  border-color: #fde68a;
+  color: #92400e;
+}
+
 .login-success-alert {
   display: flex;
   align-items: center;

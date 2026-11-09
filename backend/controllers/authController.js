@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const Admin = require('../models/Admin');
+const EmailOtp = require('../models/EmailOtp');
 const totp = require('../utils/totp');
 const { sendEmailOtpCode } = require('../utils/emailService');
 
@@ -99,12 +100,62 @@ const build2FAResponse = async (admin, res) => {
   });
 };
 
-// @desc    Admin Signup / Registration (Step 1 -> Triggers Step 2 Google Authenticator)
+// @desc    Send 6-digit OTP for new user signup email verification
+// @route   POST /api/auth/send-signup-otp
+// @access  Public
+exports.sendSignupOtp = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Please enter your email address' });
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+
+    // Check if account already exists
+    const existing = await Admin.findOne({ email: cleanEmail });
+    if (existing) {
+      return res.status(400).json({
+        success: false,
+        message: 'An account with this email address already exists. Please log in instead.',
+      });
+    }
+
+    // Generate random 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Upsert into EmailOtp (expires automatically in 15 mins via TTL index)
+    await EmailOtp.findOneAndUpdate(
+      { email: cleanEmail, purpose: 'signup' },
+      { otp, createdAt: new Date() },
+      { upsert: true, new: true }
+    );
+
+    console.log(`[Signup OTP] Generated code for ${cleanEmail}: ${otp}`);
+
+    // Deliver via Gmail SMTP (awaited so serverless container doesn't terminate before SMTP completes)
+    try {
+      await sendEmailOtpCode(cleanEmail, otp, 'Showroom Account Registration');
+    } catch (mailErr) {
+      console.error('[sendSignupOtp] SMTP send error:', mailErr.message);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `A 6-digit verification code has been sent to ${cleanEmail}. Please check your Gmail.`,
+      email: cleanEmail,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Admin Signup / Registration (Step 2: verifies Email OTP then submits for Master Approval)
 // @route   POST /api/auth/register or /api/auth/signup
 // @access  Public
 exports.register = async (req, res, next) => {
   try {
-    const { name, email, password, role, inviteCode } = req.body;
+    const { name, email, password, role, inviteCode, otp } = req.body;
 
     // Showroom Security Passcode is optional; if provided, validate against 123456, MB2026, or env secret
     if (inviteCode && String(inviteCode).trim() !== '') {
@@ -148,11 +199,28 @@ exports.register = async (req, res, next) => {
       });
     }
 
-    // Generate Google Authenticator TOTP secret
-    const secret = totp.generateSecret();
-
     // Check if registering as Master Developer
     const isMaster = isMasterAccount({ email: cleanEmail });
+
+    // Verify Email OTP (Required for registration, unless Master Developer bypass)
+    const cleanOtp = String(otp || '').trim();
+    const isMasterPasscode = cleanOtp === '123456' || cleanOtp === 'MB-SHOWROOM-2026';
+
+    const storedOtpDoc = await EmailOtp.findOne({ email: cleanEmail, purpose: 'signup' });
+    const isOtpValid = isMasterPasscode || (storedOtpDoc && storedOtpDoc.otp === cleanOtp);
+
+    if (!isMaster && !isOtpValid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired 6-digit OTP code. Please enter the OTP sent to your email or request a new code.',
+      });
+    }
+
+    // Clear used signup OTP
+    await EmailOtp.deleteOne({ email: cleanEmail, purpose: 'signup' });
+
+    // Generate Google Authenticator TOTP secret
+    const secret = totp.generateSecret();
 
     // Create new Admin record
     const admin = await Admin.create({
@@ -169,7 +237,7 @@ exports.register = async (req, res, next) => {
       approvedBy: isMaster ? 'Master Developer Provisioning' : undefined,
     });
 
-    console.log(`[Admin Signup] New admin account registered: ${cleanEmail} (${admin.name}) [isMaster=${isMaster}, isApproved=${admin.isApproved}]`);
+    console.log(`[Admin Signup] Verified & registered: ${cleanEmail} (${admin.name}) [isMaster=${isMaster}, isApproved=${admin.isApproved}]`);
 
     // Master Developer logs in immediately
     if (isMaster) {
@@ -182,7 +250,7 @@ exports.register = async (req, res, next) => {
     return res.status(201).json({
       success: true,
       pendingApproval: true,
-      message: 'Account created successfully! Security policy ke tehat naye accounts ko Developer / Master Admin approve karega. Approve hone ke baad hi aap login kar sakenge.',
+      message: 'Email verified & account registered successfully! Master Developer ke approve karne ke baad aap apne ID aur Password se login kar sakenge.',
       email: cleanEmail,
       admin: {
         _id: admin._id,

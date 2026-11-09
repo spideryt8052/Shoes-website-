@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const {
   register,
+  sendSignupOtp,
   login,
   sendEmailOtp,
   verifyEmailOtp,
@@ -27,6 +28,7 @@ const { protect, authorize } = require('../middleware/auth');
 const { loginLimiter } = require('../middleware/rateLimiter');
 
 // Primary Step 1 Auth Routes
+router.post('/send-signup-otp', loginLimiter, sendSignupOtp);
 router.post('/register', loginLimiter, register);
 router.post('/signup', loginLimiter, register);
 router.post('/login', loginLimiter, login);
