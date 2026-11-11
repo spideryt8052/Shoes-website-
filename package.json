@@ -3,12 +3,12 @@
   "version": "1.0.0",
   "description": "Multi-Brand Physical Shoe Store Digital Catalogue & Inventory Management System (MERN)",
   "scripts": {
-    "build": "cd frontend && npm install && npm run build",
+    "build": "cd frontend && npm install --include=dev && npm run build",
     "server": "cd backend && npm start",
     "server:dev": "cd backend && npm run dev",
     "client": "cd frontend && npm run dev",
     "seed": "cd backend && npm run seed",
-    "build:client": "cd frontend && npm run build"
+    "build:client": "cd frontend && npm install --include=dev && npm run build"
   },
   "keywords": [
     "shoe-store",
