@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "seed": "node seeds/seedData.js"
+    "seed": "node seeds/seedData.js",
+    "validate": "node scripts/validate.js",
+    "test": "node scripts/validate.js"
   },
   "keywords": [
     "shoe-store",

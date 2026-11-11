@@ -23,7 +23,10 @@ const formatInternationalPhone = (phone) => {
   if (clean.length === 12 && clean.startsWith('91')) {
     return clean;
   }
-  return clean;
+  if (clean.length >= 10 && clean.length <= 15) {
+    return clean;
+  }
+  return '';
 };
 
 const getBillTextAndLinks = (sale, settings) => {
@@ -84,11 +87,17 @@ exports.dispatchWhatsAppBill = async (sale) => {
   if (!targetPhone) {
     return {
       success: false,
-      message: 'Customer phone number is missing or invalid.',
+      message: 'Customer phone number is missing or invalid (minimum 10 digits required).',
     };
   }
 
-  const settings = await StoreSettings.findOne();
+  let settings = null;
+  try {
+    settings = await StoreSettings.findOne();
+  } catch (err) {
+    console.warn('[WhatsApp Service]: Could not read StoreSettings, using defaults:', err.message);
+  }
+
   const { captionText, pdfDownloadUrl } = getBillTextAndLinks(sale, settings);
 
   // Method 1: Meta WhatsApp Cloud API (Official)
@@ -113,6 +122,7 @@ exports.dispatchWhatsAppBill = async (sale) => {
             caption: captionText,
           },
         }),
+        signal: AbortSignal.timeout(8000),
       });
 
       const data = await response.json();
@@ -149,6 +159,7 @@ exports.dispatchWhatsAppBill = async (sale) => {
           filename: `Invoice-${sale.invoiceNumber}.pdf`,
           caption: captionText,
         }),
+        signal: AbortSignal.timeout(8000),
       });
 
       const data = await response.json();
@@ -186,6 +197,7 @@ exports.dispatchWhatsAppBill = async (sale) => {
               to: targetPhone,
               body: captionText,
             }),
+            signal: AbortSignal.timeout(8000),
           });
           const chatData = await chatRes.json();
           if (chatData.sent === 'true' || chatData.id) {
@@ -200,14 +212,6 @@ exports.dispatchWhatsAppBill = async (sale) => {
         } catch (chatErr) {
           console.error('[UltraMsg Chat Fallback Error]:', chatErr.message);
         }
-      }
-    } catch (err) {
-      console.error('[UltraMsg Exception]:', err.message);
-    }
-  }
-          messageId: data.id,
-          message: `PDF Bill successfully sent to +${targetPhone} via UltraMsg Gateway!`,
-        };
       }
     } catch (err) {
       console.error('[UltraMsg Exception]:', err.message);
@@ -231,6 +235,7 @@ exports.dispatchWhatsAppBill = async (sale) => {
           text: captionText,
           invoiceNumber: sale.invoiceNumber,
         }),
+        signal: AbortSignal.timeout(8000),
       });
       if (response.ok) {
         return {

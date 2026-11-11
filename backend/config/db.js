@@ -8,6 +8,17 @@ if (!process.env.VERCEL) {
   } catch (e) {}
 }
 
+// Ensure dotenv is loaded if running locally/standalone
+if (!process.env.MONGODB_URI) {
+  try {
+    const path = require('path');
+    require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+    if (!process.env.MONGODB_URI) {
+      require('dotenv').config();
+    }
+  } catch (e) {}
+}
+
 // Cache connection across serverless invocations (Vercel)
 let cached = global.mongoose;
 if (!cached) {
@@ -20,9 +31,14 @@ const connectDB = async () => {
     return cached.conn;
   }
 
-  const connectionUri =
-    process.env.MONGODB_URI ||
-    'mongodb+srv://yaseenbrp25_db_user:T0KqSDVqlP75jolq@cluster0.i74n0fg.mongodb.net/step_house_shoes?retryWrites=true&w=majority';
+  const connectionUri = process.env.MONGODB_URI;
+
+  if (!connectionUri) {
+    const errorMsg =
+      '[MongoDB] MONGODB_URI environment variable is not defined. Please configure MONGODB_URI in your Vercel project environment variables.';
+    console.error(errorMsg);
+    throw new Error(errorMsg);
+  }
 
   if (!cached.promise) {
     cached.promise = mongoose
@@ -32,6 +48,11 @@ const connectDB = async () => {
       .then((m) => {
         console.log(`[MongoDB] Connected successfully to host: ${m.connection.host}`);
         return m;
+      })
+      .catch((err) => {
+        cached.promise = null;
+        cached.conn = null;
+        throw err;
       });
   }
 

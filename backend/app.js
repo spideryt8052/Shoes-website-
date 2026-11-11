@@ -120,9 +120,11 @@ app.get(['/api', '/api/'], (req, res) => {
 
 app.get('/api/health', (req, res) => {
   const isDbConnected = mongoose.connection.readyState === 1;
-  res.status(isDbConnected ? 200 : 200).json({
-    status: isDbConnected ? 'OK' : 'WARNING',
-    database: isDbConnected ? 'Connected' : 'Disconnected',
+  const statusCode = isDbConnected ? 200 : 503;
+  res.status(statusCode).json({
+    success: isDbConnected,
+    message: isDbConnected ? 'Backend is running' : 'Backend is running (database disconnected)',
+    database: isDbConnected ? 'connected' : 'disconnected',
     showroom: 'NEW MB SHOES Bhagalpur',
     uptime: Math.floor(process.uptime()),
     timestamp: new Date().toISOString(),
