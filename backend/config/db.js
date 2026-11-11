@@ -19,6 +19,18 @@ if (!process.env.MONGODB_URI) {
   } catch (e) {}
 }
 
+// Sanitize connection URI in case of accidental wrapping quotes or "MONGODB_URI=" prefix
+const sanitizeMongoUri = (rawUri) => {
+  if (!rawUri || typeof rawUri !== 'string') return '';
+  let str = rawUri.trim();
+  str = str.replace(/^["']|["']$/g, '').trim();
+  if (/^MONGODB_URI\s*[:=]\s*/i.test(str)) {
+    str = str.replace(/^MONGODB_URI\s*[:=]\s*/i, '').trim();
+  }
+  str = str.replace(/^["']|["']$/g, '').trim();
+  return str;
+};
+
 // Cache connection across serverless invocations (Vercel)
 let cached = global.mongoose;
 if (!cached) {
@@ -31,11 +43,19 @@ const connectDB = async () => {
     return cached.conn;
   }
 
-  const connectionUri = process.env.MONGODB_URI;
+  const rawUri = process.env.MONGODB_URI;
 
-  if (!connectionUri) {
+  if (!rawUri) {
     const errorMsg =
       '[MongoDB] MONGODB_URI environment variable is not defined. Please configure MONGODB_URI in your Vercel project environment variables.';
+    console.error(errorMsg);
+    throw new Error(errorMsg);
+  }
+
+  const connectionUri = sanitizeMongoUri(rawUri);
+
+  if (!connectionUri.startsWith('mongodb://') && !connectionUri.startsWith('mongodb+srv://')) {
+    const errorMsg = `[MongoDB] Invalid MONGODB_URI format. Must start with "mongodb://" or "mongodb+srv://". (Received prefix: "${connectionUri.slice(0, 20)}...")`;
     console.error(errorMsg);
     throw new Error(errorMsg);
   }
